@@ -1,0 +1,8 @@
+{
+  "name": "website",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "lint": "eslint . --ext .ts,.tsx"
+  }
+}
