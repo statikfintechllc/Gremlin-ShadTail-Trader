@@ -1,0 +1,99 @@
+{
+  "name": "gremlin-shadtail-trader",
+  "version": "1.0.0",
+  "description": "GremlinGPT's standalone trading core with Electron, Astro, Tailwind, and FastAPI",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "install-all": "npm install && cd frontend && npm install && cd ../backend && poetry install --no-root",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:electron\"",
+    "dev:backend": "cd backend && poetry run uvicorn server:app --host 0.0.0.0 --port 8000 --reload",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:electron": "wait-on http://localhost:4321 && cross-env NODE_ENV=development electron .",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && poetry build",
+    "start": "npm run build && electron .",
+    "start:backend": "cd backend && poetry run uvicorn server:app --host 0.0.0.0 --port 8000",
+    "start:frontend": "cd frontend && npm run preview",
+    "clean": "rimraf frontend/dist frontend/node_modules backend/dist .venv",
+    "lint": "npm run lint:frontend",
+    "lint:frontend": "cd frontend && npm run lint",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && poetry run pytest",
+    "test:frontend": "cd frontend && npm run test",
+    "electron:build": "electron-builder",
+    "electron:dist": "npm run build && electron-builder --publish=never"
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.0.0",
+    "concurrently": "^8.0.0",
+    "wait-on": "^7.0.0",
+    "cross-env": "^7.0.0",
+    "rimraf": "^5.0.0"
+  },
+  "build": {
+    "appId": "com.gremlin.shadtail-trader",
+    "productName": "Gremlin ShadTail Trader",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "frontend/dist/**/*",
+      "backend/**/*",
+      "!backend/**/__pycache__",
+      "!backend/.venv",
+      "pyproject.toml"
+    ],
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.finance",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ]
+    }
+  },
+  "keywords": [
+    "trading",
+    "finance",
+    "gremlin",
+    "ai",
+    "electron",
+    "astro",
+    "fastapi",
+    "typescript"
+  ],
+  "author": "StatikFintech LLC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/statikfintechllc/Gremlin-ShadTail-Trader.git"
+  },
+  "homepage": "https://github.com/statikfintechllc/Gremlin-ShadTail-Trader#readme"
+}
