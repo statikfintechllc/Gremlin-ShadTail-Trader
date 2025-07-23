@@ -1,0 +1,27 @@
+{
+  "storage": {
+    "vector_store_path": "./backend/Gremlin-Trade-Memory/vector_store",
+    "metadata_db": "./backend/Gremlin-Trade-Memory/vector_store/metadata.db",
+    "chroma_db": "./backend/Gremlin-Trade-Memory/vector_store/chroma.sqlite3"
+  },
+  "embedding": {
+    "model": "all-MiniLM-L6-v2",
+    "dimension": 384,
+    "batch_size": 32
+  },
+  "dashboard_selected_backend": "chromadb",
+  "retention": {
+    "max_embeddings": 10000,
+    "cleanup_interval_hours": 24
+  },
+  "vectore_store": {
+    "chromadb": {
+      "persist_directory": "./backend/Gremlin-Trade-Memory/vector_store/chroma",
+      "collection_name": "gremlin_memory"
+    },
+    "faiss": {
+      "index_path": "./backend/Gremlin-Trade-Memory/vector_store/faiss_index",
+      "metadata_path": "./backend/Gremlin-Trade-Memory/vector_store/faiss_metadata.json"
+    }
+  }
+}
