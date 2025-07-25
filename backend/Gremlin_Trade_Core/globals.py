@@ -131,6 +131,18 @@ def load_configuration():
         else:
             CFG['strategy'] = get_default_strategy_config()
         
+        # Load FullSpec configuration (new)
+        fullspec_config_path = CONFIG_DIR / "FullSpec.config"
+        if fullspec_config_path.exists():
+            with open(fullspec_config_path, 'r') as f:
+                content = f.read().strip()
+                if content:
+                    CFG['full_spec'] = json.loads(content)
+                else:
+                    CFG['full_spec'] = get_default_fullspec_config()
+        else:
+            CFG['full_spec'] = get_default_fullspec_config()
+        
         # Set combined config
         CFG['memory'] = MEM
         
@@ -217,7 +229,59 @@ def get_default_system_config():
     return {
         "memory": get_default_memory_config(),
         "agents": get_default_agents_config(),
-        "strategy": get_default_strategy_config()
+        "strategy": get_default_strategy_config(),
+        "full_spec": get_default_fullspec_config()
+    }
+
+def get_default_fullspec_config():
+    """Default FullSpec configuration"""
+    return {
+        "api_keys": {
+            "grok": {
+                "api_key": "",
+                "base_url": "https://api.x.ai/v1",
+                "model": "grok-beta",
+                "max_tokens": 4000
+            },
+            "ibkr": {
+                "username": "",
+                "password": "",
+                "paper_username": "",
+                "paper_password": ""
+            }
+        },
+        "x_logins": {
+            "primary": {
+                "username": "",
+                "password": "",
+                "bearer_token": ""
+            }
+        },
+        "ibkr_logins": {
+            "paper": {
+                "host": "127.0.0.1",
+                "port": 7497,
+                "client_id": 1
+            },
+            "real": {
+                "host": "127.0.0.1",
+                "port": 7496,
+                "client_id": 2
+            }
+        },
+        "other_logins": {
+            "tailscale": {
+                "auth_key": "",
+                "hostname": "gremlin-trader"
+            }
+        },
+        "system_config": {
+            "debug_mode": False,
+            "plugins": {
+                "grok": {"enabled": True},
+                "source_editor": {"enabled": True}
+            }
+        }
     }
 
 def resolve_path(path_str: str) -> Path:
