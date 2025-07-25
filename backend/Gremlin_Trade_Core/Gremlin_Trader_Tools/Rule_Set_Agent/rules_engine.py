@@ -22,12 +22,11 @@
 
 # trading_core/rules_engine.py
 
-from datetime from backend.globals import datetime
-from utils.logging_config import setup_module_logger
+from backend.globals import datetime, setup_module_logger, embed_text, package_embedding, inject_watermark
 
 # Initialize module-specific logger
 logger = setup_module_logger("trading_core", "rules_engine")
-from memory.vector_store.embedder import embed_text, package_embedding, inject_watermark
+
 
 WATERMARK = "source:GremlinGPT"
 ORIGIN = "rules_engine"
