@@ -9,6 +9,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Backend control
   restartBackend: () => ipcRenderer.invoke('restart-backend'),
   
+  // Tailscale control
+  tailscaleStatus: () => ipcRenderer.invoke('tailscale-status'),
+  tailscaleStart: (authKey) => ipcRenderer.invoke('tailscale-start', authKey),
+  tailscaleStop: () => ipcRenderer.invoke('tailscale-stop'),
+  tailscaleQRCode: () => ipcRenderer.invoke('tailscale-qr-code'),
+  
+  // Configuration
+  getConfig: () => ipcRenderer.invoke('get-config'),
+  saveConfig: (config) => ipcRenderer.invoke('save-config', config),
+  
   // Logging (send logs to main process)
   logToMain: (level, message, data) => {
     ipcRenderer.send('log-message', { level, message, data, timestamp: new Date().toISOString() });
