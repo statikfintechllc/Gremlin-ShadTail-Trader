@@ -1,3 +1,6 @@
+stock_scraper.py
+backend/Gremlin_Trade_Core/Gremlin_Trader_Tools/Run_Time_Agent/stock_scraper.py
+backend/Gremlin_Trade_Core/Gremlin_Trader_Tools/Run_Time_Agent/stock_scraper.py
 const { app, BrowserWindow, ipcMain } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
