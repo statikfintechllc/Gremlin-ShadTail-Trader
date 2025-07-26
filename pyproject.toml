@@ -1,6 +1,8 @@
 [tool.poetry]
 name = "dashboard-backend"
 version = "0.1.0"
+description = "Gremlin ShadTail Trader Backend API"
+packages = [{include = "backend"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
