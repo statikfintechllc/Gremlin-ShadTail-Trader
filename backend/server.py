@@ -16,8 +16,10 @@ sys.path.insert(0, str(project_root))
 # Import from centralized globals and modules
 from backend.Gremlin_Trade_Core.globals import (
     CFG, MEM, logger, setup_module_logger,
-    get_live_penny_stocks, recursive_scan
+    get_live_penny_stocks, recursive_scan, BASE_DIR
 )
+from backend.Gremlin_Trade_Core.plugins import plugin_manager
+from backend.Gremlin_Trade_Core.plugins.grok import GrokPlugin
 
 # Configure logging
 logging.basicConfig(
@@ -57,6 +59,14 @@ class ScanRequest(BaseModel):
     symbols: Optional[List[str]] = None
     timeframes: Optional[List[str]] = None
     recursive: Optional[bool] = True
+
+class SourceFileRequest(BaseModel):
+    path: str
+    content: str
+
+class GrokChatRequest(BaseModel):
+    message: str
+    context: Optional[str] = "trading"
 
 @app.get("/api/feed")
 async def get_feed():
@@ -267,6 +277,231 @@ async def get_performance_metrics():
         server_logger.error(f"Error getting performance metrics: {e}")
         return {"error": str(e), "timestamp": datetime.now().isoformat()}
 
+# Source editor endpoints
+@app.get("/api/source/files")
+async def get_file_tree():
+    """Get file tree for source editor"""
+    try:
+        def build_tree(path: Path, max_depth=3, current_depth=0):
+            if current_depth >= max_depth:
+                return []
+            
+            items = []
+            try:
+                for item in sorted(path.iterdir()):
+                    # Skip hidden files and common build directories
+                    if item.name.startswith('.') or item.name in ['__pycache__', 'node_modules', 'dist', '.git']:
+                        continue
+                    
+                    rel_path = str(item.relative_to(BASE_DIR))
+                    if item.is_dir():
+                        node = {
+                            "name": item.name,
+                            "path": rel_path,
+                            "type": "directory",
+                            "children": build_tree(item, max_depth, current_depth + 1)
+                        }
+                    else:
+                        node = {
+                            "name": item.name,
+                            "path": rel_path,
+                            "type": "file",
+                            "size": item.stat().st_size,
+                            "modified": datetime.fromtimestamp(item.stat().st_mtime).isoformat()
+                        }
+                    items.append(node)
+            except PermissionError:
+                pass
+            
+            return items
+        
+        file_tree = build_tree(BASE_DIR)
+        return {"files": file_tree}
+        
+    except Exception as e:
+        server_logger.error(f"Error getting file tree: {e}")
+        return {"error": str(e)}
+
+@app.get("/api/source/file")
+async def get_file_content(path: str):
+    """Get content of a specific file"""
+    try:
+        file_path = BASE_DIR / path
+        
+        # Security check - ensure path is within project
+        try:
+            file_path.resolve().relative_to(BASE_DIR.resolve())
+        except ValueError:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        if not file_path.exists() or not file_path.is_file():
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        # Read file content
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        return {
+            "content": content,
+            "path": path,
+            "size": file_path.stat().st_size,
+            "modified": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        server_logger.error(f"Error reading file {path}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+
+@app.post("/api/source/save")
+async def save_file_content(request: SourceFileRequest):
+    """Save content to a file"""
+    try:
+        file_path = BASE_DIR / request.path
+        
+        # Security check - ensure path is within project
+        try:
+            file_path.resolve().relative_to(BASE_DIR.resolve())
+        except ValueError:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Create directory if it doesn't exist
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Backup existing file
+        if file_path.exists():
+            backup_path = file_path.with_suffix(f"{file_path.suffix}.backup")
+            import shutil
+            shutil.copy2(file_path, backup_path)
+        
+        # Write new content
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(request.content)
+        
+        server_logger.info(f"File saved: {request.path}")
+        return {
+            "message": "File saved successfully",
+            "path": request.path,
+            "size": file_path.stat().st_size,
+            "modified": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        server_logger.error(f"Error saving file {request.path}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
+
+# Agent control endpoints
+@app.get("/api/agents/status")
+async def get_agents_status():
+    """Get status of all agents"""
+    try:
+        return {
+            "status": "running" if len(active_connections) > 0 else "stopped",
+            "connections": len(active_connections),
+            "plugins": plugin_manager.get_system_status()
+        }
+    except Exception as e:
+        server_logger.error(f"Error getting agents status: {e}")
+        return {"error": str(e)}
+
+@app.post("/api/agents/start")
+async def start_agents():
+    """Start agents"""
+    try:
+        # This would start actual agent processes
+        server_logger.info("Agents start requested")
+        return {"message": "Agents started successfully"}
+    except Exception as e:
+        server_logger.error(f"Error starting agents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/agents/stop")
+async def stop_agents():
+    """Stop agents"""
+    try:
+        # This would stop actual agent processes
+        server_logger.info("Agents stop requested")
+        return {"message": "Agents stopped successfully"}
+    except Exception as e:
+        server_logger.error(f"Error stopping agents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/plugins")
+async def get_plugins():
+    """Get all loaded plugins"""
+    try:
+        return plugin_manager.get_system_status()
+    except Exception as e:
+        server_logger.error(f"Error getting plugins: {e}")
+        return {"error": str(e)}
+
+# Grok plugin endpoints
+@app.post("/api/grok/chat")
+async def grok_chat(request: GrokChatRequest):
+    """Chat with Grok AI"""
+    try:
+        grok_plugin = plugin_manager.get_plugin("grok")
+        if grok_plugin:
+            # Create a mock request object with the data
+            class MockRequest:
+                def __init__(self, data):
+                    self.data = data
+                
+                async def json(self):
+                    return self.data
+            
+            mock_request = MockRequest({
+                "message": request.message,
+                "context": request.context
+            })
+            
+            return await grok_plugin.chat_endpoint(mock_request)
+        else:
+            return {"error": "Grok plugin not available"}
+    except Exception as e:
+        server_logger.error(f"Error in Grok chat: {e}")
+        return {"error": str(e)}
+
+@app.get("/api/grok/history")
+async def grok_history(limit: int = 50):
+    """Get Grok chat history"""
+    try:
+        grok_plugin = plugin_manager.get_plugin("grok")
+        if grok_plugin:
+            # Create a mock request object
+            class MockRequest:
+                def __init__(self, params):
+                    self.query_params = params
+            
+            mock_request = MockRequest({"limit": str(limit)})
+            return await grok_plugin.get_chat_history(mock_request)
+        else:
+            return {"error": "Grok plugin not available"}
+    except Exception as e:
+        server_logger.error(f"Error getting Grok history: {e}")
+        return {"error": str(e)}
+
+@app.post("/api/grok/clear")
+async def grok_clear():
+    """Clear Grok chat history"""
+    try:
+        grok_plugin = plugin_manager.get_plugin("grok")
+        if grok_plugin:
+            # Create a mock request object
+            class MockRequest:
+                pass
+            
+            mock_request = MockRequest()
+            return await grok_plugin.clear_chat_history(mock_request)
+        else:
+            return {"error": "Grok plugin not available"}
+    except Exception as e:
+        server_logger.error(f"Error clearing Grok history: {e}")
+        return {"error": str(e)}
+
 # WebSocket for live updates
 @app.websocket("/ws/updates")
 async def websocket_updates(websocket: WebSocket):
@@ -340,6 +575,11 @@ async def startup_event():
     try:
         from backend.Gremlin_Trade_Core.config.Agent_in import coordinator
         server_logger.info("Agent coordinator initialized")
+        
+        # Initialize plugins
+        grok_config = CFG.get("full_spec", {}).get("system_config", {}).get("plugins", {}).get("grok", {})
+        if grok_config.get("enabled", True):
+            plugin_manager.load_plugin(GrokPlugin, "grok", grok_config)
         
         # Run initial system check
         system_status = await get_system_status()

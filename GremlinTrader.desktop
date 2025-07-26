@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Gremlin ShadTail Trader
+Comment=AI-Powered Trading Platform with Grok Integration
+Exec=$HOME/Gremlin-ShadTail-Trader/launch-gremlin-trader.sh
+Icon=$HOME/Gremlin-ShadTail-Trader/frontend/public/favicon.ico
+Path=$HOME/Gremlin-ShadTail-Trader
+Terminal=true
+Categories=Office;Finance;

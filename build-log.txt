@@ -1,0 +1,30 @@
+
+> dashboard-frontend@0.1.0 build
+> astro build
+
+22:08:59 [types] Generated 52ms
+22:08:59 [build] output: "static"
+22:08:59 [build] directory: /home/runner/work/Gremlin-ShadTail-Trader/Gremlin-ShadTail-Trader/frontend/dist/
+22:08:59 [build] Collecting build info...
+22:08:59 [build] ✓ Completed in 93ms.
+22:08:59 [build] Building static entrypoints...
+22:08:59 [vite] [32m✓ built in 881ms[39m
+22:08:59 [build] ✓ Completed in 910ms.
+
+ building client (vite) 
+22:08:59 [vite] transforming...
+22:09:02 [vite] [32m✓[39m 1916 modules transformed.
+22:09:02 [vite] rendering chunks...
+22:09:02 [vite] computing gzip size...
+22:09:02 [vite] [2mdist/[22m[2m_astro/[22m[36mindex.v7APR0P6.js      [39m[1m[2m  6.96 kB[22m[1m[22m[2m │ gzip:  2.78 kB[22m
+22:09:02 [vite] [2mdist/[22m[2m_astro/[22m[36mclient.CXFncrRr.js     [39m[1m[2m135.60 kB[22m[1m[22m[2m │ gzip: 43.80 kB[22m
+22:09:02 [vite] [2mdist/[22m[2m_astro/[22m[36mDashboard.SWKszTxk.js  [39m[1m[2m214.34 kB[22m[1m[22m[2m │ gzip: 62.55 kB[22m
+22:09:02 [vite] [32m✓ built in 2.88s[39m
+
+ generating static routes 
+22:09:02 ▶ src/pages/index.astro
+22:09:02   └─ /index.html (+14ms)
+22:09:02 ✓ Completed in 135ms.
+
+22:09:02 [build] 1 page(s) built in 4.02s
+22:09:02 [build] Complete!
