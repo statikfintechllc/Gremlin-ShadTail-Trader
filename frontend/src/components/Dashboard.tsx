@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { logger } from '../utils/logger';
 import GrokChat from './GrokChat';
 import SourceEditor from './SourceEditor';
+import SettingsComponent from './Settings';
 import { MessageCircle, Code, TrendingUp, Settings, Users, BarChart3 } from 'lucide-react';
 
 interface FeedItem {
@@ -134,60 +135,10 @@ const Dashboard: React.FC = () => {
       
       case 'settings':
         return (
-          <div className="h-full bg-gray-900 text-white p-6">
-            <h2 className="text-2xl font-semibold mb-6">System Settings</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-gray-800 rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4">Trading Configuration</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Scan Interval (seconds)
-                    </label>
-                    <input
-                      type="number"
-                      value={settings.scanInterval}
-                      onChange={(e) => updateSettings({ scanInterval: parseInt(e.target.value) })}
-                      className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
-                      min="1"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Symbols (comma-separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.symbols.join(', ')}
-                      onChange={(e) => updateSettings({ 
-                        symbols: e.target.value.split(',').map(s => s.trim()).filter(s => s)
-                      })}
-                      className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
-                      placeholder="GPRO, IXHL, AAPL"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-gray-800 rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4">Plugin Settings</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span>Grok Chat Plugin</span>
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Source Editor Plugin</span>
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Tailscale Integration</span>
-                    <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <SettingsComponent 
+            settings={settings} 
+            onUpdateSettings={updateSettings} 
+          />
         );
       
       default: // trading

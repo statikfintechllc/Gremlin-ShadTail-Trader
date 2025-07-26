@@ -1,11 +1,13 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 const isDev = process.env.NODE_ENV === 'development';
 
 let mainWindow;
 let backendProcess;
 let frontendProcess;
+let tailscaleStatus = { connected: false, ip: null, hostname: null };
 
 function createWindow() {
   // Create the browser window
@@ -110,8 +112,120 @@ function stopProcesses() {
   }
 }
 
+// Tailscale Management Functions
+async function checkTailscaleStatus() {
+  return new Promise((resolve) => {
+    exec('tailscale status --json', (error, stdout, stderr) => {
+      if (error) {
+        console.log('Tailscale not available or not running');
+        tailscaleStatus = { connected: false, ip: null, hostname: null };
+        resolve(tailscaleStatus);
+        return;
+      }
+      
+      try {
+        const status = JSON.parse(stdout);
+        tailscaleStatus = {
+          connected: status.BackendState === 'Running',
+          ip: status.TailscaleIPs && status.TailscaleIPs[0],
+          hostname: status.Self && status.Self.HostName
+        };
+        console.log('Tailscale status:', tailscaleStatus);
+        resolve(tailscaleStatus);
+      } catch (parseError) {
+        console.error('Failed to parse Tailscale status:', parseError);
+        tailscaleStatus = { connected: false, ip: null, hostname: null };
+        resolve(tailscaleStatus);
+      }
+    });
+  });
+}
+
+async function startTailscale(authKey = null) {
+  return new Promise((resolve, reject) => {
+    const command = authKey ? `tailscale up --auth-key=${authKey}` : 'tailscale up';
+    
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error('Failed to start Tailscale:', error);
+        reject(error);
+        return;
+      }
+      
+      console.log('Tailscale started:', stdout);
+      setTimeout(() => {
+        checkTailscaleStatus().then(resolve);
+      }, 2000);
+    });
+  });
+}
+
+async function stopTailscale() {
+  return new Promise((resolve, reject) => {
+    exec('tailscale down', (error, stdout, stderr) => {
+      if (error) {
+        console.error('Failed to stop Tailscale:', error);
+        reject(error);
+        return;
+      }
+      
+      console.log('Tailscale stopped:', stdout);
+      tailscaleStatus = { connected: false, ip: null, hostname: null };
+      resolve(tailscaleStatus);
+    });
+  });
+}
+
+async function getTailscaleQRCode() {
+  return new Promise((resolve, reject) => {
+    exec('tailscale web --auth-key --json', (error, stdout, stderr) => {
+      if (error) {
+        console.error('Failed to get Tailscale web URL:', error);
+        reject(error);
+        return;
+      }
+      
+      try {
+        const result = JSON.parse(stdout);
+        resolve(result);
+      } catch (parseError) {
+        console.error('Failed to parse Tailscale web result:', parseError);
+        reject(parseError);
+      }
+    });
+  });
+}
+
+function loadFullSpecConfig() {
+  try {
+    const configPath = path.join(__dirname, '../backend/Gremlin_Trade_Core/config/FullSpec.config');
+    if (fs.existsSync(configPath)) {
+      const configData = fs.readFileSync(configPath, 'utf8');
+      return JSON.parse(configData);
+    }
+  } catch (error) {
+    console.error('Failed to load FullSpec config:', error);
+  }
+  return null;
+}
+
 // App event handlers
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Check Tailscale status first
+  await checkTailscaleStatus();
+  
+  // Auto-start Tailscale if configured
+  const config = loadFullSpecConfig();
+  if (config && config.system_config && config.system_config.enable_tailscale_tunnel) {
+    console.log('Auto-starting Tailscale...');
+    try {
+      const authKey = config.other_logins?.tailscale?.auth_key;
+      await startTailscale(authKey);
+    } catch (error) {
+      console.warn('Failed to auto-start Tailscale:', error);
+    }
+  }
+  
   // Start backend first
   startBackend();
   
@@ -160,6 +274,49 @@ ipcMain.handle('restart-backend', () => {
     startBackend();
   }, 1000);
   return 'Backend restart initiated';
+});
+
+// Tailscale IPC handlers
+ipcMain.handle('tailscale-status', async () => {
+  return await checkTailscaleStatus();
+});
+
+ipcMain.handle('tailscale-start', async (event, authKey) => {
+  try {
+    return await startTailscale(authKey);
+  } catch (error) {
+    throw new Error(`Failed to start Tailscale: ${error.message}`);
+  }
+});
+
+ipcMain.handle('tailscale-stop', async () => {
+  try {
+    return await stopTailscale();
+  } catch (error) {
+    throw new Error(`Failed to stop Tailscale: ${error.message}`);
+  }
+});
+
+ipcMain.handle('tailscale-qr-code', async () => {
+  try {
+    return await getTailscaleQRCode();
+  } catch (error) {
+    throw new Error(`Failed to get QR code: ${error.message}`);
+  }
+});
+
+ipcMain.handle('get-config', () => {
+  return loadFullSpecConfig();
+});
+
+ipcMain.handle('save-config', (event, config) => {
+  try {
+    const configPath = path.join(__dirname, '../backend/Gremlin_Trade_Core/config/FullSpec.config');
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    return { success: true };
+  } catch (error) {
+    throw new Error(`Failed to save config: ${error.message}`);
+  }
 });
 
 // Handle any uncaught exceptions

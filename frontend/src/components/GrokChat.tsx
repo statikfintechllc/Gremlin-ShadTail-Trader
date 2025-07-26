@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MessageCircle, Trash2, Loader2 } from 'lucide-react';
+import { Send, MessageCircle, Trash2, Loader2, Copy, Check } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -16,6 +18,7 @@ export default function GrokChat({ apiBaseUrl = 'http://localhost:8000' }: GrokC
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -115,16 +118,111 @@ export default function GrokChat({ apiBaseUrl = 'http://localhost:8000' }: GrokC
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
   const formatTimestamp = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString();
   };
+
+  const copyToClipboard = async (text: string, messageIndex: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedMessageIndex(messageIndex);
+      setTimeout(() => setCopiedMessageIndex(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+    }
+  };
+
+  const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
+    const match = /language-(\w+)/.exec(className || '');
+    
+    if (!inline && match) {
+      // Multi-line code block
+      return (
+        <div className="relative bg-gray-800 border border-gray-600 rounded-md p-4 overflow-x-auto my-2">
+          <div className="text-xs text-gray-400 mb-2 flex justify-between items-center">
+            <span>{match[1]}</span>
+            <button
+              onClick={() => navigator.clipboard.writeText(String(children))}
+              className="text-gray-400 hover:text-white text-xs p-1"
+            >
+              Copy
+            </button>
+          </div>
+          <pre className="text-sm text-gray-100 overflow-x-auto">
+            <code {...props}>{children}</code>
+          </pre>
+        </div>
+      );
+    }
+    
+    // Inline code
+    return (
+      <code className="bg-gray-600 px-1 py-0.5 rounded text-sm" {...props}>
+        {children}
+      </code>
+    );
+  };
+
+  const MessageContent = ({ content, messageIndex }: { content: string; messageIndex: number }) => (
+    <div className="relative group">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          code: CodeBlock,
+          pre: ({ children }) => (
+            <div className="bg-gray-800 border border-gray-600 rounded-md p-4 overflow-x-auto">
+              {children}
+            </div>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-300">
+              {children}
+            </blockquote>
+          ),
+          table: ({ children }) => (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border border-gray-600">
+                {children}
+              </table>
+            </div>
+          ),
+          th: ({ children }) => (
+            <th className="border border-gray-600 px-4 py-2 bg-gray-700 text-left">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => (
+            <td className="border border-gray-600 px-4 py-2">
+              {children}
+            </td>
+          ),
+          a: ({ href, children }) => (
+            <a 
+              href={href} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 underline"
+            >
+              {children}
+            </a>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+      <button
+        onClick={() => copyToClipboard(content, messageIndex)}
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-600 hover:bg-gray-500 p-1 rounded"
+        title="Copy message"
+      >
+        {copiedMessageIndex === messageIndex ? (
+          <Check className="w-3 h-3 text-green-400" />
+        ) : (
+          <Copy className="w-3 h-3" />
+        )}
+      </button>
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-full bg-gray-900 text-white">
@@ -159,15 +257,22 @@ export default function GrokChat({ apiBaseUrl = 'http://localhost:8000' }: GrokC
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                className={`max-w-[85%] lg:max-w-[75%] px-4 py-3 rounded-lg ${
                   message.role === 'user'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-gray-100'
                 }`}
               >
-                <div className="text-sm">{message.content}</div>
-                <div className="text-xs opacity-70 mt-1">
-                  {formatTimestamp(message.timestamp)}
+                {message.role === 'user' ? (
+                  <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                ) : (
+                  <MessageContent content={message.content} messageIndex={index} />
+                )}
+                <div className="text-xs opacity-70 mt-2 flex justify-between items-center">
+                  <span>{formatTimestamp(message.timestamp)}</span>
+                  {message.role === 'assistant' && (
+                    <span className="text-xs bg-gray-600 px-2 py-1 rounded">Grok</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -189,26 +294,45 @@ export default function GrokChat({ apiBaseUrl = 'http://localhost:8000' }: GrokC
       {/* Input */}
       <div className="p-4 border-t border-gray-700">
         <div className="flex space-x-2">
-          <input
+          <textarea
             ref={inputRef}
-            type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask Grok about trading, markets, or coding..."
-            className="flex-1 bg-gray-800 text-white border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder="Ask Grok about trading strategies, market analysis, or get coding help..."
+            className="flex-1 bg-gray-800 text-white border border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:border-blue-500 resize-none min-h-[44px] max-h-32"
+            rows={1}
+            style={{ 
+              height: 'auto',
+              minHeight: '44px',
+              maxHeight: '128px',
+            }}
+            onInput={(e) => {
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = 'auto';
+              target.style.height = target.scrollHeight + 'px';
+            }}
             disabled={isLoading}
           />
           <button
             onClick={sendMessage}
             disabled={!inputMessage.trim() || isLoading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center min-w-[44px]"
           >
             <Send className="w-4 h-4" />
           </button>
         </div>
-        <div className="text-xs text-gray-400 mt-2">
-          Press Enter to send • Shift+Enter for new line
+        <div className="text-xs text-gray-400 mt-2 flex items-center justify-between">
+          <span>Press Enter to send • Shift+Enter for new line</span>
+          <div className="flex items-center space-x-2">
+            <span>Supports Markdown, code blocks, and tables</span>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+          </div>
         </div>
       </div>
     </div>
