@@ -68,6 +68,11 @@ class GrokChatRequest(BaseModel):
     message: str
     context: Optional[str] = "trading"
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for application status"""
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
 @app.get("/api/feed")
 async def get_feed():
     """Get trading feed data with recursive scanning"""
