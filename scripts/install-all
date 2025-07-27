@@ -77,6 +77,16 @@ cd ..
 
 print_success "All dependencies installed successfully!"
 
+print_status "Building the application..."
+npm run build
+
+if [ $? -eq 0 ]; then
+    print_success "Application built successfully!"
+else
+    print_error "Build failed! Please check the error messages above."
+    exit 1
+fi
+
 print_status "Available scripts:"
 echo "  npm run dev              - Start all services in development mode"
 echo "  npm run build            - Build the application"
@@ -84,10 +94,13 @@ echo "  npm run start            - Start the built application"
 echo "  npm run dev:backend      - Start only the backend"
 echo "  npm run dev:frontend     - Start only the frontend"
 echo "  npm run dev:electron     - Start only Electron"
+echo "  ./scripts/start-app      - Smart start (detects environment)"
 
 print_status "To get started:"
-echo "  1. Run 'npm run dev' to start in development mode"
-echo "  2. Open http://localhost:4321 in your browser"
-echo "  3. Or wait for the Electron window to open automatically"
+echo "  1. Run './scripts/start-app' for intelligent startup"
+echo "  2. Or run 'npm run start' to start the built application"
+echo "  3. Or run 'npm run dev' to start in development mode"
+echo "  4. Open http://localhost:4321 in your browser (dev mode)"
+echo "  5. Or wait for the Electron window to open automatically"
 
-print_success "Setup complete! Happy trading! 📈"
+print_success "Setup complete! Application is built and ready to run! 📈"

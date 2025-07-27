@@ -2,6 +2,47 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+
+// Auto-detect if we need to disable sandbox based on environment
+const needsSandboxDisabled = () => {
+  // Check if we're running in a container or CI environment
+  if (process.env.DOCKER_CONTAINER || 
+      process.env.CI || 
+      process.env.GITHUB_ACTIONS ||
+      process.env.container ||
+      fs.existsSync('/.dockerenv')) {
+    return true;
+  }
+  
+  // Check if chrome-sandbox exists and has proper permissions
+  try {
+    const sandboxPath = path.join(__dirname, '../node_modules/electron/dist/chrome-sandbox');
+    if (fs.existsSync(sandboxPath)) {
+      const stats = fs.statSync(sandboxPath);
+      // Check if sandbox binary has proper SUID permissions (mode 4755)
+      const expectedMode = parseInt('4755', 8);
+      if ((stats.mode & parseInt('7777', 8)) !== expectedMode) {
+        return true;
+      }
+    }
+  } catch (error) {
+    // If we can't check the sandbox, it's safer to disable it
+    return true;
+  }
+  
+  return false;
+};
+
+// Apply sandbox settings if needed - MUST be called before app.whenReady()
+if (process.env.ELECTRON_DISABLE_SANDBOX || needsSandboxDisabled()) {
+  console.log('Disabling Electron sandbox due to environment constraints');
+  app.commandLine.appendSwitch('--no-sandbox');
+  app.commandLine.appendSwitch('--disable-dev-shm-usage');
+  app.commandLine.appendSwitch('--disable-gpu'); // Additional flag for headless environments
+} else {
+  console.log('Using default Electron sandbox settings');
+}
+
 const isDev = process.env.NODE_ENV === 'development';
 
 let mainWindow;
@@ -40,7 +81,14 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:4321');
   } else {
     // In production, load the built files
-    mainWindow.loadFile(path.join(__dirname, '../frontend/dist/index.html'));
+    const frontendPath = path.join(__dirname, '../frontend/dist/index.html');
+    if (fs.existsSync(frontendPath)) {
+      mainWindow.loadFile(frontendPath);
+    } else {
+      console.error('Frontend build files not found. Please run "npm run build" first.');
+      app.quit();
+      return;
+    }
   }
 
   // Handle window closed
