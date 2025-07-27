@@ -106,7 +106,7 @@ start_backend() {
     fi
     
     # Start backend in background
-    poetry run uvicorn server:app --host 0.0.0.0 --port 8000 &
+    poetry run uvicorn dashboard_backend.server:app --host 0.0.0.0 --port 8000 &
     BACKEND_PID=$!
     cd ..
     
