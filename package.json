@@ -7,14 +7,14 @@
   "scripts": {
     "install-all": "npm install && cd frontend && npm install && cd ../backend && poetry install --no-root",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:electron\"",
-    "dev:backend": "cd backend && poetry run uvicorn server:app --host 0.0.0.0 --port 8000 --reload",
+    "dev:backend": "cd backend && poetry run uvicorn dashboard_backend.server:app --host 0.0.0.0 --port 8000 --reload",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:electron": "wait-on http://localhost:4321 && cross-env NODE_ENV=development electron .",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "cd frontend && npm run build",
     "build:backend": "cd backend && poetry build",
     "start": "npm run build && electron .",
-    "start:backend": "cd backend && poetry run uvicorn server:app --host 0.0.0.0 --port 8000",
+    "start:backend": "cd backend && poetry run uvicorn dashboard_backend.server:app --host 0.0.0.0 --port 8000",
     "start:frontend": "cd frontend && npm run preview",
     "clean": "rimraf frontend/dist frontend/node_modules backend/dist .venv",
     "lint": "npm run lint:frontend",
@@ -44,8 +44,7 @@
       "frontend/dist/**/*",
       "backend/**/*",
       "!backend/**/__pycache__",
-      "!backend/.venv",
-      "pyproject.toml"
+      "!backend/.venv"
     ],
     "extraResources": [
       {

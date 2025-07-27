@@ -13,6 +13,7 @@ __pycache__/
 frontend/dist/
 frontend/.astro/
 backend/dist/
+backend/dashboard_backend.egg-info/
 dist-electron/
 build/
 

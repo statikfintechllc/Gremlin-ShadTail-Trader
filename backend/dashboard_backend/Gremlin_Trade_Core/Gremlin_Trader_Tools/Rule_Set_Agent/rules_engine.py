@@ -22,7 +22,7 @@
 
 # trading_core/rules_engine.py
 
-from backend.globals import datetime, setup_module_logger, embed_text, package_embedding, inject_watermark
+from dashboard_backend.globals import datetime, setup_module_logger, embed_text, package_embedding, inject_watermark
 
 # Initialize module-specific logger
 logger = setup_module_logger("trading_core", "rules_engine")

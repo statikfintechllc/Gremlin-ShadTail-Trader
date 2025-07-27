@@ -39,7 +39,7 @@ except ImportError:
     ML_AVAILABLE = False
 
 # System paths and configuration
-BASE_DIR = Path(__file__).parent.parent.parent  # Root of Gremlin-ShadTail-Trader
+BASE_DIR = Path(__file__).parent.parent.parent.parent  # Root of Gremlin-ShadTail-Trader
 BACKEND_DIR = BASE_DIR / "backend"
 CONFIG_DIR = BACKEND_DIR / "Gremlin_Trade_Core" / "config"
 MEMORY_DIR = BACKEND_DIR / "Gremlin_Trade_Memory"

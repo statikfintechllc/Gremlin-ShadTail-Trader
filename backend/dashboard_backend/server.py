@@ -10,16 +10,16 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 
 # Add project root to path for imports
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import from centralized globals and modules
-from backend.Gremlin_Trade_Core.globals import (
+from dashboard_backend.Gremlin_Trade_Core.globals import (
     CFG, MEM, logger, setup_module_logger,
     get_live_penny_stocks, recursive_scan, BASE_DIR
 )
-from backend.Gremlin_Trade_Core.plugins import plugin_manager
-from backend.Gremlin_Trade_Core.plugins.grok import GrokPlugin
+from dashboard_backend.Gremlin_Trade_Core.plugins import plugin_manager
+from dashboard_backend.Gremlin_Trade_Core.plugins.grok import GrokPlugin
 
 # Configure logging
 logging.basicConfig(
@@ -75,7 +75,7 @@ async def get_feed():
         server_logger.info("Feed data requested")
         
         # Import signal generator
-        from backend.Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.signal_generator import generate_signals
+        from dashboard_backend.Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.signal_generator import generate_signals
         
         # Generate signals using the enhanced system
         signals = generate_signals(limit=20, embed=True)
@@ -120,7 +120,7 @@ async def run_scan(request: ScanRequest):
             results = recursive_scan(symbols, timeframes)
         else:
             # Run simple scan
-            from backend.Gremlin_Trade_Core.globals import run_scanner
+            from dashboard_backend.Gremlin_Trade_Core.globals import run_scanner
             results = run_scanner(symbols)
         
         server_logger.info(f"Scan complete - {len(results)} results")
@@ -193,7 +193,7 @@ async def query_memory(q: str = "", limit: int = 10):
     try:
         server_logger.info(f"Memory query: '{q}' (limit: {limit})")
         
-        from backend.Gremlin_Trade_Memory.embedder import query_embeddings, get_all_embeddings
+        from dashboard_backend.Gremlin_Trade_Memory.embedder import query_embeddings, get_all_embeddings
         
         if q:
             # Query by similarity
@@ -228,8 +228,8 @@ async def query_memory(q: str = "", limit: int = 10):
 async def get_system_status():
     """Get comprehensive system status"""
     try:
-        from backend.Gremlin_Trade_Core.config.Agent_in import get_status
-        from backend.Gremlin_Trade_Memory.embedder import get_backend_status
+        from dashboard_backend.Gremlin_Trade_Core.config.Agent_in import get_status
+        from dashboard_backend.Gremlin_Trade_Memory.embedder import get_backend_status
         
         agent_status = get_status()
         memory_status = get_backend_status()
@@ -261,8 +261,8 @@ async def get_system_status():
 async def get_performance_metrics():
     """Get performance metrics"""
     try:
-        from backend.Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.signal_generator import get_signal_performance_metrics
-        from backend.Gremlin_Trade_Core.Gremlin_Trader_Tools.Agents_out import get_performance_summary
+        from dashboard_backend.Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.signal_generator import get_signal_performance_metrics
+        from dashboard_backend.Gremlin_Trade_Core.Gremlin_Trader_Tools.Agents_out import get_performance_summary
         
         signal_metrics = get_signal_performance_metrics()
         system_metrics = get_performance_summary()
@@ -533,7 +533,7 @@ async def websocket_updates(websocket: WebSocket):
 async def get_live_update_data():
     """Get live data for WebSocket updates"""
     try:
-        from backend.Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.signal_generator import generate_signals
+        from dashboard_backend.Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.signal_generator import generate_signals
         
         # Generate fresh signals
         signals = generate_signals(limit=5, embed=False)  # Don't embed for live updates
@@ -573,7 +573,7 @@ async def startup_event():
     
     # Initialize system components
     try:
-        from backend.Gremlin_Trade_Core.config.Agent_in import coordinator
+        from dashboard_backend.Gremlin_Trade_Core.config.Agent_in import coordinator
         server_logger.info("Agent coordinator initialized")
         
         # Initialize plugins
