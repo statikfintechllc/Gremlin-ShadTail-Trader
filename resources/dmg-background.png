@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="540" height="380" viewBox="0 0 540 380" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+  </defs>
+  <rect width="540" height="380" fill="url(#bg)"/>
+  <text x="270" y="50" text-anchor="middle" fill="#eee" font-family="Arial, sans-serif" font-size="24" font-weight="bold">Gremlin ShadTail Trader</text>
+  <text x="270" y="80" text-anchor="middle" fill="#aaa" font-family="Arial, sans-serif" font-size="14">Drag to Applications folder to install</text>
+</svg>

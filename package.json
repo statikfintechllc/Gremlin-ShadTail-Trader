@@ -5,7 +5,7 @@
   "main": "electron/main.js",
   "private": true,
   "scripts": {
-    "install-all": "npm install && cd frontend && npm install && cd ../backend && poetry install --no-root",
+    "install-all": "./scripts/install-all",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:electron\"",
     "dev:backend": "cd backend && poetry run uvicorn dashboard_backend.server:app --host 0.0.0.0 --port 8000 --reload",
     "dev:frontend": "cd frontend && npm run dev",
@@ -13,19 +13,26 @@
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "cd frontend && npm run build",
     "build:backend": "cd backend && poetry build",
-    "start": "npm run build && electron . --no-sandbox --disable-dev-shm-usage --disable-gpu",
+    "start": "npm run build && node scripts/bootstrap.js",
     "start:safe": "npm run build && electron . --no-sandbox --disable-dev-shm-usage --disable-gpu",
     "start:display": "npm run build && DISPLAY=:0 electron . --no-sandbox --disable-dev-shm-usage",
     "start:backend": "cd backend && poetry run uvicorn dashboard_backend.server:app --host 0.0.0.0 --port 8000",
     "start:frontend": "cd frontend && npm run preview",
-    "clean": "rimraf frontend/dist frontend/node_modules backend/dist .venv",
+    "clean": "rimraf frontend/dist frontend/node_modules backend/dist .venv dist-electron",
     "lint": "npm run lint:frontend",
     "lint:frontend": "cd frontend && npm run lint",
     "test": "npm run test:backend && npm run test:frontend",
     "test:backend": "cd backend && poetry run pytest",
     "test:frontend": "cd frontend && npm run test",
+    "package": "npm run build && electron-builder",
+    "package:all": "npm run build && electron-builder --mac --win --linux",
+    "package:mac": "npm run build && electron-builder --mac",
+    "package:win": "npm run build && electron-builder --win",
+    "package:linux": "npm run build && electron-builder --linux",
     "electron:build": "electron-builder",
-    "electron:dist": "npm run build && electron-builder --publish=never"
+    "electron:dist": "npm run build && electron-builder --publish=never",
+    "setup-deps": "node scripts/setup-dependencies.js",
+    "bootstrap": "node scripts/bootstrap.js"
   },
   "devDependencies": {
     "electron": "^27.0.0",
@@ -33,51 +40,98 @@
     "concurrently": "^8.0.0",
     "wait-on": "^7.0.0",
     "cross-env": "^7.0.0",
-    "rimraf": "^5.0.0"
+    "rimraf": "^5.0.0",
+    "@types/node": "^20.0.0"
   },
   "build": {
     "appId": "com.gremlin.shadtail-trader",
     "productName": "Gremlin ShadTail Trader",
     "directories": {
-      "output": "dist-electron"
+      "output": "dist-electron",
+      "buildResources": "resources"
     },
     "files": [
       "electron/**/*",
       "frontend/dist/**/*",
-      "backend/**/*",
+      "scripts/bootstrap.js",
+      "scripts/setup-dependencies.js",
+      "package.json",
       "!backend/**/__pycache__",
-      "!backend/.venv"
+      "!backend/.venv",
+      "!**/*.log",
+      "!**/*.tmp"
     ],
     "extraResources": [
       {
         "from": "backend",
-        "to": "backend"
+        "to": "backend",
+        "filter": ["!**/__pycache__", "!**/.venv", "!**/*.pyc"]
+      },
+      {
+        "from": "scripts",
+        "to": "scripts"
       }
     ],
+    "beforeBuild": "scripts/prebuild.js",
+    "afterPack": "scripts/postpack.js",
     "mac": {
       "category": "public.app-category.finance",
+      "icon": "resources/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist",
       "target": [
         {
           "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
           "arch": ["x64", "arm64"]
         }
       ]
     },
     "win": {
+      "icon": "resources/icon.ico",
       "target": [
         {
           "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
           "arch": ["x64"]
         }
       ]
     },
     "linux": {
+      "icon": "resources/icon.png",
+      "category": "Office",
       "target": [
         {
           "target": "AppImage",
           "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        },
+        {
+          "target": "rpm",
+          "arch": ["x64"]
         }
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "dmg": {
+      "writeUpdateInfo": false,
+      "background": "resources/dmg-background.png"
     }
   },
   "keywords": [
