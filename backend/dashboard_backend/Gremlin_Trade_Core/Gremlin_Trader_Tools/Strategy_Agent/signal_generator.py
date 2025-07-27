@@ -13,10 +13,10 @@ from pathlib import Path
 from datetime import datetime
 
 # Add project root to path for centralized imports
-project_root = Path(__file__).parent.parent.parent.parent.parent
+project_root = Path(__file__).parent.parent.parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from backend.Gremlin_Trade_Core.globals import (
+from dashboard_backend.Gremlin_Trade_Core.globals import (
     apply_signal_rules, 
     get_live_penny_stocks,
     package_embedding,
@@ -346,7 +346,7 @@ def get_signal_history(limit=100):
     Return signal embedding history for dashboard/graph.
     """
     try:
-        from backend.Gremlin_Trade_Memory.embedder import get_all_embeddings
+        from dashboard_backend.Gremlin_Trade_Memory.embedder import get_all_embeddings
 
         signals = []
         for emb in get_all_embeddings(limit):
@@ -362,7 +362,7 @@ def repair_signal_index():
     Self-repair for embeddings relevant to signals.
     """
     try:
-        from backend.Gremlin_Trade_Memory.embedder import repair_index
+        from dashboard_backend.Gremlin_Trade_Memory.embedder import repair_index
 
         repair_index()
         logger.info("[SIGNAL_GENERATOR] Signal embedding index repaired.")

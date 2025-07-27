@@ -55,7 +55,7 @@ function startBackend() {
   const backendPath = path.join(__dirname, '../backend');
   
   // Start the FastAPI backend using poetry or uvicorn
-  backendProcess = spawn('poetry', ['run', 'uvicorn', 'server:app', '--host', '0.0.0.0', '--port', '8000'], {
+  backendProcess = spawn('poetry', ['run', 'uvicorn', 'dashboard_backend.server:app', '--host', '0.0.0.0', '--port', '8000'], {
     cwd: backendPath,
     stdio: 'pipe',
   });
