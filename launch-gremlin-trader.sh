@@ -4,7 +4,7 @@
 # This script starts all services and opens the Electron app
 
 echo "🚀 Starting Gremlin ShadTail Trader..."
-echo "📊 AI-Powered Trading Platform with Grok Integration"
+echo "📊 AI-Powered Trading Platform with Autonomous Features"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -39,59 +39,21 @@ check_dependencies() {
     print_status "Checking system dependencies..."
     
     if ! command -v node &> /dev/null; then
-        print_error "Node.js not found. Please install Node.js."
+        print_error "Node.js not found. Please run ./install.sh first."
         exit 1
     fi
     
     if ! command -v python3 &> /dev/null; then
-        print_error "Python 3 not found. Please install Python 3."
+        print_error "Python 3 not found. Please run ./install.sh first."
         exit 1
     fi
     
     if ! command -v poetry &> /dev/null; then
-        print_error "Poetry not found. Please install Poetry."
+        print_error "Poetry not found. Please run ./install.sh first."
         exit 1
     fi
     
     print_success "All dependencies available"
-}
-
-# Start Tailscale if available and configuration enables it
-start_tailscale() {
-    if command -v tailscale &> /dev/null; then
-        print_status "Checking Tailscale configuration..."
-        
-        # Check if auto-start is enabled in config
-        if [ -f "backend/Gremlin_Trade_Core/config/FullSpec.config" ]; then
-            ENABLE_TAILSCALE=$(python3 -c "
-import json
-try:
-    with open('backend/Gremlin_Trade_Core/config/FullSpec.config', 'r') as f:
-        config = json.load(f)
-    print(config.get('system_config', {}).get('enable_tailscale_tunnel', False))
-except:
-    print(False)
-" 2>/dev/null)
-            
-            if [ "$ENABLE_TAILSCALE" = "True" ]; then
-                print_status "Auto-starting Tailscale..."
-                if ! tailscale status &> /dev/null; then
-                    sudo tailscale up
-                    if [ $? -eq 0 ]; then
-                        print_success "Tailscale started successfully"
-                    else
-                        print_warning "Failed to start Tailscale"
-                    fi
-                else
-                    print_success "Tailscale already running"
-                fi
-            else
-                print_status "Tailscale auto-start disabled in config"
-            fi
-        fi
-    else
-        print_warning "Tailscale not installed"
-    fi
 }
 
 # Start backend with proper error handling
@@ -106,7 +68,7 @@ start_backend() {
     fi
     
     # Start backend in background
-    poetry run uvicorn server:app --host 0.0.0.0 --port 8000 &
+    poetry run uvicorn dashboard_backend.server:app --host 0.0.0.0 --port 8000 &
     BACKEND_PID=$!
     cd ..
     
@@ -124,7 +86,7 @@ start_backend() {
     return 1
 }
 
-# Start Electron app
+# Start Electron app with cross-platform compatibility
 start_electron() {
     print_status "Starting Electron desktop application..."
     
@@ -136,8 +98,23 @@ start_electron() {
         cd ..
     fi
     
+    # Detect environment and set appropriate flags
+    ELECTRON_FLAGS=""
+    
+    # Check if running in headless environment
+    if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
+        print_warning "No display detected. Running in headless mode."
+        ELECTRON_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-gpu --headless"
+    else
+        # Check if running in container or CI
+        if [ -n "$CI" ] || [ -f "/.dockerenv" ] || grep -q docker /proc/1/cgroup 2>/dev/null; then
+            ELECTRON_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-gpu"
+        fi
+    fi
+    
     # Start Electron app
-    cross-env NODE_ENV=production electron . &
+    print_status "Starting with flags: $ELECTRON_FLAGS"
+    cross-env NODE_ENV=production electron . $ELECTRON_FLAGS &
     ELECTRON_PID=$!
     
     print_success "Electron app started (PID: $ELECTRON_PID)"
@@ -149,11 +126,11 @@ start_electron() {
     echo "   Desktop App: Running in Electron"
     echo ""
     echo "📱 Features Available:"
-    echo "   • Grok AI Chat Assistant"
-    echo "   • Live Source Code Editor"
-    echo "   • Real-time Trading Feed"
-    echo "   • System Monitoring & Agent Control"
-    echo "   • Tailscale Network Integration"
+    echo "   • Autonomous Trading System"
+    echo "   • Live Market Data Scraping"
+    echo "   • AI-Powered Decision Making"
+    echo "   • Real-time Vector Embeddings"
+    echo "   • Cross-platform Desktop Interface"
     echo ""
     echo "Press Ctrl+C to stop all services"
 }
@@ -182,7 +159,6 @@ trap cleanup SIGINT SIGTERM
 # Main execution
 main() {
     check_dependencies
-    start_tailscale
     
     if start_backend; then
         start_electron

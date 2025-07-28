@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Intelligent start script for Gremlin ShadTail Trader
+# Automatically detects environment and uses appropriate settings
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+cd "$PROJECT_ROOT"
+
+print_status "Starting Gremlin ShadTail Trader..."
+
+# Check if we're in a headless environment
+if [[ -n "$CI" || -n "$GITHUB_ACTIONS" || -z "$DISPLAY" ]]; then
+    print_warning "Detected headless/CI environment. Cannot start GUI application."
+    print_status "In headless environments, you can:"
+    echo "  1. Use 'npm run dev:backend' to start only the backend server"
+    echo "  2. Use 'npm run dev:frontend' to start only the frontend (in dev mode)"
+    echo "  3. Run the app on a system with a display"
+    exit 0
+fi
+
+# Check if built files exist
+if [[ ! -d "frontend/dist" || ! -d "backend/dist" ]]; then
+    print_status "Built files not found. Running build first..."
+    npm run build
+fi
+
+print_status "Starting application with appropriate settings for your environment..."
+
+# Start the application with cross-platform settings
+npm run start
+
+print_success "Application started successfully!"
