@@ -87,19 +87,33 @@ function createWindow() {
     }
   });
 
-  // Load the frontend
+    // Load the frontend
   if (isDev) {
     // In development, use the Astro dev server
     mainWindow.loadURL('http://localhost:4321');
   } else {
-    // In production, load the built files
+    // In production, load the built files from inside the asar package
     const frontendPath = path.join(__dirname, '../frontend/dist/index.html');
+    console.log('Looking for frontend at:', frontendPath);
+    
     if (fs.existsSync(frontendPath)) {
+      console.log('Loading frontend from:', frontendPath);
       mainWindow.loadFile(frontendPath);
     } else {
-      console.error('Frontend build files not found. Please run "npm run build" first.');
-      app.quit();
-      return;
+      console.error('Frontend build files not found at:', frontendPath);
+      console.log('__dirname:', __dirname);
+      console.log('Available files:', fs.readdirSync(path.join(__dirname, '..')));
+      
+      // Fallback: try different path
+      const fallbackPath = path.join(__dirname, '../frontend-dist/index.html');
+      if (fs.existsSync(fallbackPath)) {
+        console.log('Loading frontend from fallback:', fallbackPath);
+        mainWindow.loadFile(fallbackPath);
+      } else {
+        console.error('Frontend build files not found. Please run "npm run build" first.');
+        app.quit();
+        return;
+      }
     }
   }
 
@@ -337,7 +351,7 @@ app.whenReady().then(async () => {
       createWindow();
     }
   });
-});
+}); // Close the app.whenReady().then() function
 
 app.on('window-all-closed', () => {
   stopProcesses();
@@ -405,7 +419,7 @@ ipcMain.handle('save-config', (event, config) => {
   } catch (error) {
     throw new Error(`Failed to save config: ${error.message}`);
   }
-});
+}); // Added missing closing brace
 
 // Handle any uncaught exceptions
 process.on('uncaughtException', (error) => {

@@ -114,6 +114,15 @@ async function postpackLinux(appOutDir) {
     if (fs.existsSync(backendPath)) {
         await execAsync(`find "${backendPath}" -name "*.py" -exec chmod +x {} \\;`);
         log('Fixed Python script permissions');
+        
+        // Install Poetry dependencies for the packaged backend
+        log('Installing Poetry dependencies for packaged backend...');
+        const poetryInstallResult = await execAsync(`cd "${backendPath}" && poetry install`);
+        if (poetryInstallResult !== '') {
+            log('Poetry dependencies installed successfully');
+        } else {
+            log('Poetry dependency installation completed');
+        }
     }
     
     // Create desktop entry

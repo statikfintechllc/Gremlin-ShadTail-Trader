@@ -7,5 +7,21 @@ export default defineConfig({
     react(),
     tailwind()
   ],
+  base: './', // Use relative paths for Electron
+  build: {
+    assets: '_astro', // Keep assets in _astro folder
+    assetsPrefix: './' // Ensure all assets use relative paths
+  },
+  vite: {
+    build: {
+      rollupOptions: {
+        output: {
+          assetFileNames: '_astro/[name]-[hash][extname]',
+          chunkFileNames: '_astro/[name]-[hash].js',
+          entryFileNames: '_astro/[name]-[hash].js'
+        }
+      }
+    }
+  }
 });
 

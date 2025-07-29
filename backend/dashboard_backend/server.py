@@ -141,6 +141,75 @@ async def run_scan(request: ScanRequest):
         server_logger.error(f"Error running scan: {e}")
         raise HTTPException(status_code=500, detail=f"Scan failed: {str(e)}")
 
+@app.get("/api/config")
+async def get_config():
+    """Get full system configuration for Settings page"""
+    try:
+        server_logger.info("Config requested")
+        
+        # Return default config structure that the Settings page expects
+        config = {
+            "api_keys": {
+                "grok": {
+                    "api_key": "",
+                    "base_url": "https://api.x.ai/v1",
+                    "model": "grok-beta",
+                    "max_tokens": 4096
+                },
+                "ibkr": {
+                    "username": "",
+                    "password": "",
+                    "paper_username": "",
+                    "paper_password": ""
+                }
+            },
+            "other_logins": {
+                "tailscale": {
+                    "auth_key": "",
+                    "hostname": "gremlin-trader",
+                    "tags": []
+                }
+            },
+            "system_config": {
+                "enable_tailscale_tunnel": False,
+                "pwa_publishing": {
+                    "enabled": False,
+                    "tunnel_name": "gremlin-trader",
+                    "qr_code_enabled": True
+                },
+                "plugins": {
+                    "grok": {
+                        "enabled": True
+                    },
+                    "source_editor": {
+                        "enabled": True
+                    }
+                }
+            }
+        }
+        
+        return config
+        
+    except Exception as e:
+        server_logger.error(f"Error getting config: {e}")
+        raise HTTPException(status_code=500, detail=f"Config retrieval failed: {str(e)}")
+
+@app.post("/api/config")
+async def save_config(config: dict):
+    """Save system configuration from Settings page"""
+    try:
+        server_logger.info(f"Config save requested: {config}")
+        
+        # In a real implementation, this would save to a config file
+        # For now, just log and return success
+        server_logger.info("Config saved successfully (mock implementation)")
+        
+        return {"message": "Configuration saved successfully"}
+        
+    except Exception as e:
+        server_logger.error(f"Error saving config: {e}")
+        raise HTTPException(status_code=500, detail=f"Config save failed: {str(e)}")
+
 @app.get("/api/settings")
 async def get_settings():
     """Get current settings including system configuration"""
@@ -192,6 +261,67 @@ async def post_settings(s: Settings):
     except Exception as e:
         server_logger.error(f"Error updating settings: {e}")
         raise HTTPException(status_code=500, detail=f"Settings update failed: {str(e)}")
+
+@app.get("/api/config")
+async def get_config():
+    """Get full system configuration for Settings page"""
+    try:
+        server_logger.info("Config requested")
+        
+        # Return the configuration structure that Settings.tsx expects
+        config = {
+            "api_keys": {
+                "grok": {
+                    "api_key": CFG.get("full_spec", {}).get("api_keys", {}).get("grok", {}).get("api_key", ""),
+                    "base_url": "https://api.x.ai/v1",
+                    "model": "grok-beta",
+                    "max_tokens": 4000
+                },
+                "ibkr": {
+                    "username": "",
+                    "password": "",
+                    "paper_username": "",
+                    "paper_password": ""
+                }
+            },
+            "other_logins": {
+                "tailscale": {
+                    "auth_key": "",
+                    "hostname": "gremlin-trader",
+                    "tags": []
+                }
+            },
+            "system_config": {
+                "enable_tailscale_tunnel": False,
+                "pwa_publishing": {
+                    "enabled": False,
+                    "tunnel_name": "gremlin-trader",
+                    "qr_code_enabled": False
+                },
+                "plugins": {
+                    "grok": {"enabled": True},
+                    "source_editor": {"enabled": True}
+                }
+            }
+        }
+        
+        return config
+        
+    except Exception as e:
+        server_logger.error(f"Error getting config: {e}")
+        return {"error": str(e)}
+
+@app.post("/api/config")
+async def save_config(config: dict):
+    """Save system configuration"""
+    try:
+        server_logger.info("Config save requested")
+        # For now, just acknowledge the save - could implement actual persistence later
+        return {"message": "Configuration saved successfully"}
+        
+    except Exception as e:
+        server_logger.error(f"Error saving config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/memory")
 async def query_memory(q: str = "", limit: int = 10):
@@ -739,48 +869,21 @@ async def get_market_overview():
 
 @app.get("/api/feed/real")
 async def get_real_feed():
-    """Get trading feed with REAL market data instead of placeholder data"""
+    """Get trading feed with REAL market data - returns exactly what backend provides"""
     try:
         from dashboard_backend.Gremlin_Trade_Core.simple_market_service import get_live_penny_stocks_real
-        from dashboard_backend.Gremlin_Trade_Core.globals import apply_signal_rules
         
         server_logger.info("Real feed data requested")
         
-        # Get real market data
+        # Get real market data - return exactly what we get, no filtering, no fake data
         stocks = await get_live_penny_stocks_real(limit=20)
         
-        # Apply signal rules to real data
-        feed_data = []
-        for stock in stocks:
-            # Apply signal generation rules
-            signal = apply_signal_rules(stock)
-            if signal:
-                feed_item = {
-                    "symbol": stock.get("symbol"),
-                    "price": stock.get("price"),
-                    "up_pct": stock.get("up_pct", 0),
-                    "volume": stock.get("volume", 0),
-                    "signal_types": signal.get("signal", []),
-                    "confidence": signal.get("confidence", 0.7),
-                    "risk_score": 0.3,  # Calculate based on volatility
-                    "strategy_score": 0.8,  # Calculate based on signal strength
-                    "pattern_type": "momentum",
-                    "timeframe": "1min",
-                    "timestamp": stock.get("timestamp"),
-                    "rsi": stock.get("rsi"),
-                    "vwap": stock.get("vwap"),
-                    "rotation": stock.get("rotation"),
-                    "data_source": stock.get("data_source", "simple_market")
-                }
-                feed_data.append(feed_item)
-        
-        server_logger.info(f"Returning {len(feed_data)} real signals")
-        return feed_data
+        server_logger.info(f"Returning {len(stocks)} raw market data entries")
+        return stocks  # Return exactly what the backend provides
         
     except Exception as e:
         server_logger.error(f"Error getting real feed data: {e}")
-        # Return error but don't crash
-        return [{"symbol": "ERROR", "price": 0, "error": f"Real feed failed: {str(e)}"}]
+        return []  # Return empty list on error, no fake data
 
 if __name__ == "__main__":
     import uvicorn

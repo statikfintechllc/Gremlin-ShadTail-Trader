@@ -213,6 +213,8 @@ export default function Settings({ settings, onUpdateSettings }: SettingsProps) 
                 onChange={(e) => onUpdateSettings({ scanInterval: parseInt(e.target.value) })}
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
                 min="1"
+                title="Scan Interval"
+                placeholder="Enter scan interval in seconds"
               />
             </div>
             <div>
@@ -226,7 +228,8 @@ export default function Settings({ settings, onUpdateSettings }: SettingsProps) 
                   symbols: e.target.value.split(',').map(s => s.trim()).filter(s => s)
                 })}
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
-                placeholder="GPRO, IXHL, AAPL"
+                placeholder="Enter symbols (e.g., GPRO, IXHL, AAPL)"
+                title="Symbols"
               />
             </div>
           </div>
