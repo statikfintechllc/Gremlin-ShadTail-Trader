@@ -32,33 +32,20 @@ export default function SourceEditor({ apiBaseUrl = 'http://localhost:8000' }: S
 
   const loadFileTree = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch(`${apiBaseUrl}/api/source/files`);
       if (response.ok) {
         const data = await response.json();
         setFileTree(data.files || []);
+      } else {
+        console.error('Failed to load file tree: HTTP', response.status);
+        setFileTree([]); // Show empty instead of fake data
       }
     } catch (error) {
       console.error('Failed to load file tree:', error);
-      // Fallback mock data
-      setFileTree([
-        {
-          name: 'backend',
-          path: '/backend',
-          type: 'directory',
-          children: [
-            { name: 'server.py', path: '/backend/server.py', type: 'file', size: 15234 },
-            { name: 'Gremlin_Trade_Core', path: '/backend/Gremlin_Trade_Core', type: 'directory' }
-          ]
-        },
-        {
-          name: 'frontend',
-          path: '/frontend',
-          type: 'directory',
-          children: [
-            { name: 'src', path: '/frontend/src', type: 'directory' }
-          ]
-        }
-      ]);
+      setFileTree([]); // Show empty instead of fake data
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -68,6 +55,8 @@ export default function SourceEditor({ apiBaseUrl = 'http://localhost:8000' }: S
       if (response.ok) {
         const data = await response.json();
         setAgentStatus(data.status === 'running' ? 'running' : 'stopped');
+      } else {
+        setAgentStatus('error');
       }
     } catch (error) {
       console.error('Failed to check agent status:', error);
@@ -89,15 +78,21 @@ export default function SourceEditor({ apiBaseUrl = 'http://localhost:8000' }: S
         setFileContent(data.content || '');
         setSelectedFile(filePath);
         setIsDirty(false);
+      } else {
+        console.error('Failed to load file:', response.status);
+        setFileContent(`// Error: Could not load file ${filePath}\n// Status: ${response.status}`);
+        setSelectedFile(filePath);
+        setIsDirty(false);
       }
     } catch (error) {
       console.error('Failed to load file content:', error);
-      // Mock content for demonstration
-      setFileContent(`# File: ${filePath}
-# This is a mock file content for development
-
-def example_function():
-    """Example function"""
+      setFileContent(`// Error: Network error loading ${filePath}\n// ${error}`);
+      setSelectedFile(filePath);
+      setIsDirty(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
     return "Hello from ${filePath}"
 
 if __name__ == "__main__":
