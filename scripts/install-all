@@ -71,7 +71,8 @@ if command -v apt-get &> /dev/null; then
     sudo apt-get install -y curl wget git build-essential python3 python3-pip python3-venv \
         nodejs npm imagemagick sqlite3 chromium-browser fonts-dejavu-core \
         libnss3-dev libatk-bridge2.0-dev libdrm2 libgtk-3-dev libgbm-dev \
-        xvfb x11vnc fluxbox rpm apt-transport-https ca-certificates gnupg lsb-release
+        xvfb x11vnc fluxbox rpm apt-transport-https ca-certificates gnupg lsb-release \
+        autoconf automake libtool
     
     # Install Tailscale for secure networking
     print_crypto "Installing Tailscale for secure tunnel networking..."
@@ -99,17 +100,6 @@ else
 fi
 
 cd "$PROJECT_ROOT"
-
-# Check for Ubuntu/Debian and install system packages
-if command -v apt-get &> /dev/null; then
-    print_status "Installing system packages (Ubuntu/Debian)..."
-    print_status "You may be prompted for your sudo password..."
-    sudo apt-get update
-    sudo apt-get install -y curl wget git build-essential python3 python3-pip python3-venv \
-        nodejs npm imagemagick sqlite3 chromium-browser fonts-dejavu-core \
-        libnss3-dev libatk-bridge2.0-dev libdrm2 libgtk-3-dev libgbm-dev \
-        xvfb x11vnc fluxbox rpm
-fi
 
 # Check Node.js version (minimum 18)
 print_status "Checking Node.js installation..."
@@ -171,7 +161,7 @@ poetry add numpy pandas fastapi uvicorn chromadb sentence-transformers \
     yfinance pillow requests aiohttp asyncio-mqtt websockets \
     python-multipart jinja2 pydantic-settings python-dotenv \
     schedule apscheduler python-jose cryptography passlib bcrypt \
-    ta-lib python-binance ccxt websocket-client python-telegram-bot
+    python-binance ccxt websocket-client python-telegram-bot
 
 cd ..
 

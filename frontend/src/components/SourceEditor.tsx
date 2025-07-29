@@ -93,17 +93,6 @@ export default function SourceEditor({ apiBaseUrl = 'http://localhost:8000' }: S
       setIsLoading(false);
     }
   };
-    return "Hello from ${filePath}"
-
-if __name__ == "__main__":
-    print(example_function())
-`);
-      setSelectedFile(filePath);
-      setIsDirty(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const saveFile = async () => {
     if (!selectedFile || !isDirty) return;

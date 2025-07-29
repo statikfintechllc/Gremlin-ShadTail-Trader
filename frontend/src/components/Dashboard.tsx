@@ -375,92 +375,252 @@ const Dashboard: React.FC = () => {
 
   const renderAgentsTab = () => (
     <div className="h-full p-6 space-y-6">
-      <Card className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border-gray-700/50">
+      <Card className="bg-gradient-to-br from-trading-black to-trading-gray-200 border-trading-gray-300">
         <CardHeader>
           <CardTitle className="flex items-center text-xl">
-            <Users className="w-5 h-5 mr-2 text-purple-400" />
+            <Users className="w-5 h-5 mr-2 text-trading-gold" />
             Agent Control Center
+            <span className="ml-2 text-xs bg-trading-gold/20 text-trading-gold px-2 py-1 rounded">LIVE</span>
           </CardTitle>
-          <CardDescription>Monitor and control autonomous trading agents</CardDescription>
+          <CardDescription className="text-trading-bronze">Individual control panels for each autonomous trading agent</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="bg-gradient-to-br from-green-900/20 to-green-800/20 border-green-800/50">
-              <CardHeader>
-                <CardTitle className="text-lg text-green-300">Trading Agents</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Scanner Agent</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-green-400">Active</span>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-trading-gold"></div>
+              <p className="ml-4 text-trading-bronze">Loading agent controls...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Scanner Agent Control Panel */}
+              <Card className="bg-gradient-to-br from-blue-900/20 to-blue-800/20 border-blue-800/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between text-lg text-blue-300">
+                    <span>Scanner Agent</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-blue-400">ACTIVE</span>
+                    </div>
+                  </CardTitle>
+                  <CardDescription className="text-sm text-trading-bronze">Market scanning and opportunity detection</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <span className="text-trading-bronze">CPU:</span>
+                      <span className="ml-2 text-blue-400">12.5%</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Memory:</span>
+                      <span className="ml-2 text-blue-400">180MB</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Uptime:</span>
+                      <span className="ml-2 text-blue-400">2h 15m</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Scans:</span>
+                      <span className="ml-2 text-blue-400">1,247</span>
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Strategy Agent</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-green-400">Active</span>
+                  <div className="space-y-2">
+                    <label className="text-xs text-trading-bronze">Scan Interval (seconds):</label>
+                    <input type="number" defaultValue={30} className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded" />
                   </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Risk Agent</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                    <span className="text-xs text-yellow-400">Monitoring</span>
+                  <div className="space-y-2">
+                    <label className="text-xs text-trading-bronze">Min Volume Filter:</label>
+                    <input type="number" defaultValue={100000} className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded" />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex space-x-2">
+                    <button className="flex-1 px-3 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded">START</button>
+                    <button className="flex-1 px-3 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded">STOP</button>
+                    <button className="flex-1 px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded">RESTART</button>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="bg-gradient-to-br from-blue-900/20 to-blue-800/20 border-blue-800/50">
-              <CardHeader>
-                <CardTitle className="text-lg text-blue-300">System Status</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm">CPU Usage</span>
-                  <span className="text-sm text-blue-400">45%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Memory</span>
-                  <span className="text-sm text-blue-400">2.1GB / 4GB</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Connections</span>
-                  <span className="text-sm text-blue-400">3 Active</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Uptime</span>
-                  <span className="text-sm text-blue-400">2h 15m</span>
-                </div>
-              </CardContent>
-            </Card>
+              {/* Strategy Agent Control Panel */}
+              <Card className="bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-800/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between text-lg text-purple-300">
+                    <span>Strategy Agent</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-purple-400">ACTIVE</span>
+                    </div>
+                  </CardTitle>
+                  <CardDescription className="text-sm text-trading-bronze">Trading strategy execution and signal generation</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <span className="text-trading-bronze">CPU:</span>
+                      <span className="ml-2 text-purple-400">8.3%</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Memory:</span>
+                      <span className="ml-2 text-purple-400">95MB</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Signals:</span>
+                      <span className="ml-2 text-purple-400">342</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Accuracy:</span>
+                      <span className="ml-2 text-purple-400">87.2%</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-trading-bronze">Active Strategy:</label>
+                    <select className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded">
+                      <option>Mean Reversion</option>
+                      <option>Momentum</option>
+                      <option>Breakout</option>
+                      <option>Scalping</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-trading-bronze">Risk Level:</label>
+                    <select className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded">
+                      <option>Conservative</option>
+                      <option>Moderate</option>
+                      <option>Aggressive</option>
+                    </select>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button className="flex-1 px-3 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded">START</button>
+                    <button className="flex-1 px-3 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded">STOP</button>
+                    <button className="flex-1 px-3 py-1 text-xs bg-purple-600 hover:bg-purple-500 text-white rounded">OPTIMIZE</button>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card className="bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-800/50">
-              <CardHeader>
-                <CardTitle className="text-lg text-purple-300">Performance</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm">Signals/Hour</span>
-                  <span className="text-sm text-purple-400">142</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Accuracy</span>
-                  <span className="text-sm text-purple-400">87.3%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Latency</span>
-                  <span className="text-sm text-purple-400">12ms</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Queue</span>
-                  <span className="text-sm text-purple-400">0 pending</span>
-                </div>
-              </CardContent>
-            </Card>
+              {/* Risk Management Agent Control Panel */}
+              <Card className="bg-gradient-to-br from-orange-900/20 to-orange-800/20 border-orange-800/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between text-lg text-orange-300">
+                    <span>Risk Management Agent</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-orange-400">MONITORING</span>
+                    </div>
+                  </CardTitle>
+                  <CardDescription className="text-sm text-trading-bronze">Portfolio protection and risk assessment</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <span className="text-trading-bronze">CPU:</span>
+                      <span className="ml-2 text-orange-400">5.1%</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Memory:</span>
+                      <span className="ml-2 text-orange-400">45MB</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Risk Score:</span>
+                      <span className="ml-2 text-orange-400">3.2/10</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Alerts:</span>
+                      <span className="ml-2 text-orange-400">7</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-trading-bronze">Max Position Size (%):</label>
+                    <input type="number" defaultValue={5} max={25} className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-trading-bronze">Stop Loss (%):</label>
+                    <input type="number" defaultValue={2} max={10} step={0.1} className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded" />
+                  </div>
+                  <div className="flex space-x-2">
+                    <button className="flex-1 px-3 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded">ENABLE</button>
+                    <button className="flex-1 px-3 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded">DISABLE</button>
+                    <button className="flex-1 px-3 py-1 text-xs bg-orange-600 hover:bg-orange-500 text-white rounded">CONFIG</button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Memory Agent Control Panel */}
+              <Card className="bg-gradient-to-br from-green-900/20 to-green-800/20 border-green-800/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between text-lg text-green-300">
+                    <span>Memory Agent</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-green-400">ACTIVE</span>
+                    </div>
+                  </CardTitle>
+                  <CardDescription className="text-sm text-trading-bronze">Knowledge retention and pattern learning</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <span className="text-trading-bronze">CPU:</span>
+                      <span className="ml-2 text-green-400">15.2%</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Memory:</span>
+                      <span className="ml-2 text-green-400">210MB</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Patterns:</span>
+                      <span className="ml-2 text-green-400">8,943</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">DB Size:</span>
+                      <span className="ml-2 text-green-400">2.3GB</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-trading-bronze">Learning Rate:</label>
+                    <select className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded">
+                      <option>Fast</option>
+                      <option>Normal</option>
+                      <option>Slow</option>
+                      <option>Conservative</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs text-trading-bronze">Memory Retention (days):</label>
+                    <input type="number" defaultValue={30} min={7} max={365} className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded" />
+                  </div>
+                  <div className="flex space-x-2">
+                    <button className="flex-1 px-3 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded">START</button>
+                    <button className="flex-1 px-3 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded">CLEAR</button>
+                    <button className="flex-1 px-3 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded">BACKUP</button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Global Agent Controls */}
+      <Card className="bg-gradient-to-br from-trading-black to-trading-gray-200 border-trading-gray-300">
+        <CardHeader>
+          <CardTitle className="text-xl text-trading-gold">Global Agent Controls</CardTitle>
+          <CardDescription className="text-trading-bronze">Master controls for all agents</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-4">
+            <button className="px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium">
+              START ALL AGENTS
+            </button>
+            <button className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium">
+              STOP ALL AGENTS
+            </button>
+            <button className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium">
+              RESTART ALL AGENTS
+            </button>
+            <button className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium">
+              EMERGENCY STOP
+            </button>
+            <button className="px-6 py-2 bg-trading-gold hover:bg-trading-gold/80 text-black rounded-lg font-medium">
+              SAVE CONFIGURATION
+            </button>
           </div>
         </CardContent>
       </Card>
@@ -468,14 +628,14 @@ const Dashboard: React.FC = () => {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground">
+    <div className="h-screen flex flex-col bg-trading-black text-trading-gold">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+      <header className="border-b border-trading-gray-300 bg-trading-gray-100/50 backdrop-blur-sm">
         <div className="flex items-center justify-between p-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-blue-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-trading-gold via-trading-red to-trading-bronze bg-clip-text text-transparent">
             Gremlin ShadTail Trader
           </h1>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-trading-bronze">
             AI-Powered Trading Platform
           </div>
         </div>
@@ -483,39 +643,39 @@ const Dashboard: React.FC = () => {
 
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="flex-1 flex flex-col">
-        <div className="border-b border-border bg-card/30">
+        <div className="border-b border-trading-gray-300 bg-trading-gray-200/30">
           <TabsList className="grid w-full grid-cols-5 bg-transparent p-1">
             <TabsTrigger 
               value="trading" 
-              className="flex items-center space-x-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+              className="flex items-center space-x-2 data-[state=active]:bg-trading-gold/20 data-[state=active]:text-trading-gold text-trading-bronze hover:text-trading-gold"
             >
               <TrendingUp className="w-4 h-4" />
               <span>Trading</span>
             </TabsTrigger>
             <TabsTrigger 
               value="chat" 
-              className="flex items-center space-x-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+              className="flex items-center space-x-2 data-[state=active]:bg-trading-gold/20 data-[state=active]:text-trading-gold text-trading-bronze hover:text-trading-gold"
             >
               <MessageCircle className="w-4 h-4" />
               <span>Grok Chat</span>
             </TabsTrigger>
             <TabsTrigger 
               value="source" 
-              className="flex items-center space-x-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+              className="flex items-center space-x-2 data-[state=active]:bg-trading-gold/20 data-[state=active]:text-trading-gold text-trading-bronze hover:text-trading-gold"
             >
               <Code className="w-4 h-4" />
               <span>Source</span>
             </TabsTrigger>
             <TabsTrigger 
               value="agents" 
-              className="flex items-center space-x-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+              className="flex items-center space-x-2 data-[state=active]:bg-trading-gold/20 data-[state=active]:text-trading-gold text-trading-bronze hover:text-trading-gold"
             >
               <Users className="w-4 h-4" />
               <span>Agents</span>
             </TabsTrigger>
             <TabsTrigger 
               value="settings" 
-              className="flex items-center space-x-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+              className="flex items-center space-x-2 data-[state=active]:bg-trading-gold/20 data-[state=active]:text-trading-gold text-trading-bronze hover:text-trading-gold"
             >
               <Settings className="w-4 h-4" />
               <span>Settings</span>
