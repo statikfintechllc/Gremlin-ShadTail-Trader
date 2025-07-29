@@ -47,6 +47,12 @@ print_header "Starting complete system installation..."
 # System dependencies check and installation
 print_status "Checking system dependencies..."
 
+# Check if ImageMagick is installed
+cd /tmp && wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz && tar -xzf ta-lib-0.4.0-src.tar.gz && cd ta-lib && ./configure --prefix=/usr && make && sudo make install && sudo ldconfig
+
+
+cd "$PROJECT_ROOT"
+
 # Check for Ubuntu/Debian and install system packages
 if command -v apt-get &> /dev/null; then
     print_status "Installing system packages (Ubuntu/Debian)..."
@@ -101,7 +107,7 @@ cd backend
 # Update pyproject.toml with all required dependencies
 print_status "Updating Python dependencies..."
 poetry add numpy pandas fastapi uvicorn chromadb sentence-transformers \
-    yfinance ta-lib ta pillow requests aiohttp asyncio-mqtt \
+    yfinance pillow requests aiohttp asyncio-mqtt \
     websockets python-multipart jinja2 \
     pydantic-settings python-dotenv schedule apscheduler \
     python-jose cryptography passlib bcrypt || true
