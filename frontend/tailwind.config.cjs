@@ -7,17 +7,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Professional Trading Theme: Black/Gray/Red-Gold-Bronze
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        background: "hsl(var(--background))", // Pure black
+        foreground: "hsl(var(--foreground))", // Red-gold text
         primary: {
-          DEFAULT: "hsl(var(--primary))",
+          DEFAULT: "hsl(var(--primary))", // Red-gold primary
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
+          DEFAULT: "hsl(var(--secondary))", // Dark gray
           foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
@@ -25,11 +26,11 @@ module.exports = {
           foreground: "hsl(var(--destructive-foreground))",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
+          DEFAULT: "hsl(var(--muted))", // Medium gray
           foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
+          DEFAULT: "hsl(var(--accent))", // Bronze accent
           foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
@@ -37,9 +38,25 @@ module.exports = {
           foreground: "hsl(var(--popover-foreground))",
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
+          DEFAULT: "hsl(var(--card))", // Dark gray cards
           foreground: "hsl(var(--card-foreground))",
         },
+        // Custom trading theme colors
+        trading: {
+          black: "#000000",
+          gray: {
+            100: "#1a1a1a",
+            200: "#2a2a2a", 
+            300: "#3a3a3a",
+            400: "#4a4a4a",
+            500: "#5a5a5a",
+          },
+          red: "#ff3b30",
+          gold: "#ff6b35",
+          bronze: "#c9a96e",
+          green: "#30d158",
+          blue: "#007aff",
+        }
       },
       borderRadius: {
         lg: "var(--radius)",

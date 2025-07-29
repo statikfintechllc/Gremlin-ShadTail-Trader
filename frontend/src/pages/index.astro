@@ -10,27 +10,32 @@ import Dashboard from '../components/Dashboard.tsx';
     <title>Gremlin ShadTail Trader</title>
     <style>
       :root {
-        /* Dark theme - sleek professional colors */
-        --background: 222.2 84% 4.9%;
-        --foreground: 210 40% 98%;
-        --card: 222.2 84% 4.9%;
-        --card-foreground: 210 40% 98%;
-        --popover: 222.2 84% 4.9%;
-        --popover-foreground: 210 40% 98%;
-        --primary: 142.1 76.2% 36.3%;
-        --primary-foreground: 222.2 84% 4.9%;
-        --secondary: 217.2 32.6% 17.5%;
-        --secondary-foreground: 210 40% 98%;
-        --muted: 217.2 32.6% 17.5%;
-        --muted-foreground: 215 20.2% 65.1%;
-        --accent: 142.1 76.2% 36.3%;
-        --accent-foreground: 222.2 84% 4.9%;
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 210 40% 98%;
-        --border: 217.2 32.6% 17.5%;
-        --input: 217.2 32.6% 17.5%;
-        --ring: 142.1 76.2% 36.3%;
+        /* Professional Trading Theme: Black/Gray/Red-Gold-Bronze */
+        --background: 0 0% 0%;              /* Pure black background */
+        --foreground: 21 100% 59%;          /* Red-gold text (#ff6b35) */
+        --card: 0 0% 16%;                   /* Dark gray cards (#2a2a2a) */
+        --card-foreground: 21 100% 59%;     /* Red-gold text on cards */
+        --popover: 0 0% 10%;                /* Darker gray popover */
+        --popover-foreground: 21 100% 59%;  /* Red-gold popover text */
+        --primary: 21 100% 59%;             /* Red-gold primary (#ff6b35) */
+        --primary-foreground: 0 0% 0%;      /* Black text on primary */
+        --secondary: 0 0% 29%;              /* Medium gray (#4a4a4a) */
+        --secondary-foreground: 42 29% 70%; /* Bronze text (#c9a96e) */
+        --muted: 0 0% 35%;                  /* Lighter gray (#5a5a5a) */
+        --muted-foreground: 42 29% 70%;     /* Bronze muted text */
+        --accent: 42 29% 70%;               /* Bronze accent (#c9a96e) */
+        --accent-foreground: 0 0% 0%;       /* Black text on accent */
+        --destructive: 0 100% 59%;          /* Pure red (#ff3b30) */
+        --destructive-foreground: 0 0% 100%; /* White text on red */
+        --border: 0 0% 23%;                 /* Gray borders (#3a3a3a) */
+        --input: 0 0% 16%;                  /* Dark gray input (#2a2a2a) */
+        --ring: 21 100% 59%;                /* Red-gold focus ring */
         --radius: 0.75rem;
+        
+        /* Custom trading colors */
+        --trading-success: 142 76% 36%;     /* Green for profits */
+        --trading-warning: 45 100% 51%;     /* Yellow for caution */
+        --trading-info: 211 100% 50%;       /* Blue for info */
       }
       
       * {
@@ -41,6 +46,27 @@ import Dashboard from '../components/Dashboard.tsx';
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         background-color: hsl(var(--background));
         color: hsl(var(--foreground));
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      
+      /* Custom scrollbar for dark theme */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      
+      ::-webkit-scrollbar-track {
+        background: hsl(var(--muted));
+      }
+      
+      ::-webkit-scrollbar-thumb {
+        background: hsl(var(--accent));
+        border-radius: 4px;
+      }
+      
+      ::-webkit-scrollbar-thumb:hover {
+        background: hsl(var(--primary));
       }
     </style>
   </head>

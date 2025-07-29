@@ -6,8 +6,7 @@ import SettingsComponent from './Settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Switch } from './ui/switch';
-import { MessageCircle, Code, TrendingUp, Settings, Users, BarChart3, Activity, DollarSign, Zap, Target, Database, TestTube } from 'lucide-react';
+import { MessageCircle, Code, TrendingUp, Settings, Users, BarChart3, Activity, DollarSign, Zap, Target } from 'lucide-react';
 
 interface FeedItem {
   symbol: string;
@@ -45,7 +44,6 @@ const Dashboard: React.FC = () => {
   const [settings, setSettings] = useState<Settings>({ scanInterval: 300, symbols: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [useRealData, setUseRealData] = useState(true);
 
   const API_BASE = 'http://localhost:8000/api';
 
@@ -55,26 +53,21 @@ const Dashboard: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        // Choose between real and demo data
-        const feedEndpoint = useRealData ? `${API_BASE}/feed/real` : `${API_BASE}/feed`;
-        
-        // Fetch feed data
-        const feedResponse = await fetch(feedEndpoint);
+        // Always use real agent data from /api/feed (agent-generated signals)
+        const feedResponse = await fetch(`${API_BASE}/feed`);
         if (!feedResponse.ok) throw new Error('Failed to fetch feed');
         const feedData = await feedResponse.json();
         setFeed(feedData);
         
-        // Fetch market overview (only for real data mode)
-        if (useRealData) {
-          try {
-            const overviewResponse = await fetch(`${API_BASE}/market/overview`);
-            if (overviewResponse.ok) {
-              const overviewData = await overviewResponse.json();
-              setMarketOverview(overviewData);
-            }
-          } catch (overviewError) {
-            logger.warn('Market overview failed to load:', overviewError);
+        // Fetch market overview
+        try {
+          const overviewResponse = await fetch(`${API_BASE}/market/overview`);
+          if (overviewResponse.ok) {
+            const overviewData = await overviewResponse.json();
+            setMarketOverview(overviewData);
           }
+        } catch (overviewError) {
+          logger.warn('Market overview failed to load:', overviewError);
         }
         
         // Fetch settings
@@ -83,7 +76,7 @@ const Dashboard: React.FC = () => {
         const settingsData = await settingsResponse.json();
         setSettings(settingsData);
         
-        logger.info(`Dashboard data loaded successfully (${useRealData ? 'REAL' : 'DEMO'} data mode)`);
+        logger.info('Dashboard data loaded successfully (REAL AGENT DATA)');
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         setError(errorMessage);
@@ -98,7 +91,7 @@ const Dashboard: React.FC = () => {
     // Auto-refresh data
     const interval = setInterval(fetchData, settings.scanInterval * 1000);
     return () => clearInterval(interval);
-  }, [settings.scanInterval, useRealData]);
+  }, [settings.scanInterval]);
 
   const updateSettings = async (newSettings: Partial<Settings>) => {
     try {
@@ -177,23 +170,8 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Data Mode Toggle */}
-      <div className="flex items-center space-x-2 mb-4">
-        <TestTube className="w-4 h-4" />
-        <span className="text-sm">Demo Mode</span>
-        <Switch
-          checked={useRealData}
-          onCheckedChange={setUseRealData}
-        />
-        <span className="text-sm">Real Data</span>
-        <Database className="w-4 h-4" />
-        {useRealData && (
-          <span className="text-xs text-green-400 ml-2">● Live Market Data</span>
-        )}
-      </div>
-
-      {/* Market Overview (Real Data Only) */}
-      {useRealData && marketOverview.indices && (
+      {/* Market Overview */}
+      {marketOverview.indices && (
         <Card className="bg-gradient-to-br from-blue-900/20 to-purple-900/20 border-blue-700/50 mb-6">
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
@@ -238,10 +216,10 @@ const Dashboard: React.FC = () => {
           <CardTitle className="flex items-center text-xl">
             <BarChart3 className="w-5 h-5 mr-2 text-blue-400" />
             Live Trading Feed
-            {useRealData && <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">REAL DATA</span>}
+            <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">AGENT DATA</span>
           </CardTitle>
           <CardDescription>
-            {useRealData ? 'Real-time market signals from yfinance' : 'Demo trading signals for testing'}
+            Real-time trading signals from trading agents
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -288,40 +266,38 @@ const Dashboard: React.FC = () => {
                         <div className="text-sm text-muted-foreground">
                           ${item.price.toFixed(2)}
                         </div>
-                        {useRealData && (
-                          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                            {item.volume && (
-                              <div>
-                                <span className="text-muted-foreground">Vol:</span>
-                                <span className="ml-1">{(item.volume / 1000000).toFixed(1)}M</span>
-                              </div>
-                            )}
-                            {item.rsi && (
-                              <div>
-                                <span className="text-muted-foreground">RSI:</span>
-                                <span className={`ml-1 ${
-                                  item.rsi > 70 ? 'text-red-400' : 
-                                  item.rsi < 30 ? 'text-green-400' : 
-                                  'text-yellow-400'
-                                }`}>
-                                  {item.rsi.toFixed(1)}
-                                </span>
-                              </div>
-                            )}
-                            {item.rotation && (
-                              <div>
-                                <span className="text-muted-foreground">Rotation:</span>
-                                <span className="ml-1">{item.rotation.toFixed(1)}x</span>
-                              </div>
-                            )}
-                            {item.confidence && (
-                              <div>
-                                <span className="text-muted-foreground">Confidence:</span>
-                                <span className="ml-1">{(item.confidence * 100).toFixed(0)}%</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                          {item.volume && (
+                            <div>
+                              <span className="text-muted-foreground">Vol:</span>
+                              <span className="ml-1">{(item.volume / 1000000).toFixed(1)}M</span>
+                            </div>
+                          )}
+                          {item.rsi && (
+                            <div>
+                              <span className="text-muted-foreground">RSI:</span>
+                              <span className={`ml-1 ${
+                                item.rsi > 70 ? 'text-red-400' : 
+                                item.rsi < 30 ? 'text-green-400' : 
+                                'text-yellow-400'
+                              }`}>
+                                {item.rsi.toFixed(1)}
+                              </span>
+                            </div>
+                          )}
+                          {item.rotation && (
+                            <div>
+                              <span className="text-muted-foreground">Rotation:</span>
+                              <span className="ml-1">{item.rotation.toFixed(1)}x</span>
+                            </div>
+                          )}
+                          {item.confidence && (
+                            <div>
+                              <span className="text-muted-foreground">Confidence:</span>
+                              <span className="ml-1">{(item.confidence * 100).toFixed(0)}%</span>
+                            </div>
+                          )}
+                        </div>
                         {item.signal_types && item.signal_types.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1">
                             {item.signal_types.map((signal, i) => (
@@ -358,7 +334,7 @@ const Dashboard: React.FC = () => {
                 <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">No trading signals available</p>
                 <p className="text-sm text-muted-foreground/70">
-                  {useRealData ? 'Real market data will appear here when available' : 'Demo signals will appear here'}
+                  Agent signals will appear here when available
                 </p>
               </div>
             )}
