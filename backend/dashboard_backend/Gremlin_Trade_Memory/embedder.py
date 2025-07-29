@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from dashboard_backend.Gremlin_Trade_Core.globals import (
     CFG, MEM, logger, setup_module_logger, resolve_path, DATA_DIR,
-    METADATA_DB_PATH, CHROMA_DB_PATH, VECTOR_STORE_DIR
+    METADATA_DB_PATH, CHROMA_DIR, CHROMA_DB_PATH, VECTOR_STORE_DIR
 )
 
 # Module logger
@@ -66,22 +66,19 @@ except ImportError:
     TRADING_LIBS_AVAILABLE = False
     embedder_logger.warning("Trading libraries not available")
 
-# Configuration & Paths
-storage_conf = MEM.get("storage", {})
-if not isinstance(storage_conf, dict):
-    embedder_logger.error("[EMBEDDER] storage config malformed; resetting to empty dict")
-    storage_conf = {}
+# Configuration & Paths - Use unified ChromaDB configuration from globals
+# Unified path configuration - use only one ChromaDB database
+LOCAL_INDEX_PATH = VECTOR_STORE_DIR / "local_index"
 
-BASE_VECTOR_PATH = storage_conf.get("vector_store_path", str(VECTOR_STORE_DIR))
-CHROMA_DIR = Path(BASE_VECTOR_PATH) / "chroma"
-LOCAL_INDEX_PATH = Path(BASE_VECTOR_PATH) / "local_index"
-
-# Ensure directories exist
+# Ensure directories exist using centralized CHROMA_DIR
 for path in [CHROMA_DIR, LOCAL_INDEX_PATH, VECTOR_STORE_DIR]:
     try:
         path.mkdir(parents=True, exist_ok=True)
     except Exception as e:
         embedder_logger.error(f"[EMBEDDER] Failed to create directory {path}: {e}")
+
+embedder_logger.info(f"Using unified ChromaDB at: {CHROMA_DIR}")
+embedder_logger.info(f"Using metadata DB at: {METADATA_DB_PATH}")
 
 # Global variables for autonomous operation
 memory_vectors = {}
@@ -283,10 +280,19 @@ def init_metadata_database():
                 last_accessed TEXT,
                 created_at TEXT NOT NULL,
                 tags TEXT,
-                metadata TEXT,
-                INDEX(content_type, importance_score),
-                INDEX(source, created_at)
+                metadata TEXT
             )
+        ''')
+        
+        # Create indexes separately
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_embedding_content_importance 
+            ON embedding_metadata(content_type, importance_score)
+        ''')
+        
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_embedding_source_created 
+            ON embedding_metadata(source, created_at)
         ''')
         
         conn.commit()

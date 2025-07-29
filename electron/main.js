@@ -33,15 +33,17 @@ const needsSandboxDisabled = () => {
   return false;
 };
 
-// Apply sandbox settings if needed - MUST be called before app.whenReady()
-if (process.env.ELECTRON_DISABLE_SANDBOX || needsSandboxDisabled()) {
-  console.log('Disabling Electron sandbox due to environment constraints');
-  app.commandLine.appendSwitch('--no-sandbox');
-  app.commandLine.appendSwitch('--disable-dev-shm-usage');
-  app.commandLine.appendSwitch('--disable-gpu'); // Additional flag for headless environments
-} else {
-  console.log('Using default Electron sandbox settings');
-}
+// COMPLETELY DISABLE ALL SANDBOXING - NO CONSTRAINTS
+console.log('Disabling Electron sandbox due to environment constraints');
+app.commandLine.appendSwitch('--no-sandbox');
+app.commandLine.appendSwitch('--disable-dev-shm-usage');
+app.commandLine.appendSwitch('--disable-gpu');
+app.commandLine.appendSwitch('--disable-features=VizDisplayCompositor');
+app.commandLine.appendSwitch('--disable-web-security');
+app.commandLine.appendSwitch('--allow-running-insecure-content');
+app.commandLine.appendSwitch('--disable-background-timer-throttling');
+app.commandLine.appendSwitch('--disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('--disable-renderer-backgrounding');
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -51,19 +53,29 @@ let frontendProcess;
 let tailscaleStatus = { connected: false, ip: null, hostname: null };
 
 function createWindow() {
-  // Create the browser window
+  // Create the browser window with NO CONSTRAINTS
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1400,
+    height: 900,
+    minWidth: 800,
+    minHeight: 600,
+    backgroundColor: '#000000', // Dark background
     webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
-      webSecurity: false, // Allow localhost connections in dev
+      nodeIntegration: true,
+      contextIsolation: false,
+      enableRemoteModule: true,
+      webSecurity: false,
+      allowRunningInsecureContent: true,
+      experimentalFeatures: true,
     },
-    icon: path.join(__dirname, '../assets/icon.png'), // Add icon if available
+    icon: path.join(__dirname, '../resources/icon.png'),
     titleBarStyle: 'default',
-    show: false, // Don't show until ready
+    show: false,
+    frame: true,
+    resizable: true,
+    maximizable: true,
+    minimizable: true,
+    closable: true,
   });
 
   // Show window when ready to prevent visual flash

@@ -56,9 +56,10 @@ CFG = {}
 MEM = {}
 DATA_DIR = str(VECTOR_STORE_DIR)
 
-# Database paths
-METADATA_DB_PATH = VECTOR_STORE_DIR / "metadata.db"
-CHROMA_DB_PATH = VECTOR_STORE_DIR / "chroma.sqlite3"
+# Database paths - Unified ChromaDB configuration
+METADATA_DB_PATH = VECTOR_STORE_DIR / "metadata.db" 
+CHROMA_DIR = VECTOR_STORE_DIR / "chroma"  # Directory for ChromaDB persistence
+CHROMA_DB_PATH = CHROMA_DIR / "chroma.sqlite3"  # Main ChromaDB file
 
 # Global logging configuration
 def setup_module_logger(module_group: str, module_name: str) -> logging.Logger:
@@ -378,20 +379,37 @@ def package_embedding(text: str, vector: np.ndarray, meta: Dict[str, Any]) -> Di
 
 # Trading utility functions
 def get_live_penny_stocks() -> List[Dict[str, Any]]:
-    """Get live penny stock data - placeholder for real implementation"""
-    # This would integrate with real data sources
-    return [
-        {
-            "symbol": "GPRO",
-            "price": 2.15,
-            "volume": 1500000,
-            "rotation": 2.3,
-            "up_pct": 12.5,
-            "ema": {"5": 2.10, "20": 2.05},
-            "vwap": 2.12,
-            "rsi": 65.0
-        }
-    ]
+    """Get live penny stock data - now uses working simple market service"""
+    try:
+        # Import here to avoid circular imports
+        import asyncio
+        from dashboard_backend.Gremlin_Trade_Core.simple_market_service import get_live_penny_stocks_real
+        
+        # Get real data asynchronously
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            real_data = loop.run_until_complete(get_live_penny_stocks_real(limit=50))
+            return real_data
+        finally:
+            loop.close()
+            
+    except Exception as e:
+        logger.error(f"Error getting penny stocks, falling back to sample data: {e}")
+        # Fallback to sample data if real data fails
+        return [
+            {
+                "symbol": "GPRO",
+                "price": 2.15,
+                "volume": 1500000,
+                "rotation": 2.3,
+                "up_pct": 12.5,
+                "ema": {"5": 2.10, "20": 2.05},
+                "vwap": 2.12,
+                "rsi": 65.0,
+                "error": "Service unavailable - showing fallback"
+            }
+        ]
 
 def apply_signal_rules(stock: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Apply signal generation rules to stock data"""

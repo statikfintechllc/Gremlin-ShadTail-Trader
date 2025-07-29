@@ -144,7 +144,10 @@
     "fastapi",
     "typescript"
   ],
-  "author": "StatikFintech LLC",
+  "author": {
+    "name": "StatikFintech LLC",
+    "email": "ascend.gremlin@gmail.com"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
