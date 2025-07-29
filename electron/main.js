@@ -112,12 +112,36 @@ function createWindow() {
 function startBackend() {
   console.log('Starting backend server...');
   
-  const backendPath = path.join(__dirname, '../backend');
+  let backendPath, command, args;
   
-  // Start the FastAPI backend using poetry or uvicorn
-  backendProcess = spawn('poetry', ['run', 'uvicorn', 'dashboard_backend.server:app', '--host', '0.0.0.0', '--port', '8000'], {
+  if (isDev) {
+    // Development mode - use poetry
+    backendPath = path.join(__dirname, '../backend');
+    command = 'poetry';
+    args = ['run', 'uvicorn', 'dashboard_backend.server:app', '--host', '0.0.0.0', '--port', '8000'];
+  } else {
+    // Production mode - use poetry from the packaged backend directory
+    backendPath = path.join(process.resourcesPath, 'backend');
+    command = 'poetry';
+    args = ['run', 'uvicorn', 'dashboard_backend.server:app', '--host', '0.0.0.0', '--port', '8000'];
+    
+    // Set PYTHONPATH to include the backend directory
+    process.env.PYTHONPATH = backendPath + ':' + (process.env.PYTHONPATH || '');
+  }
+
+  console.log(`Backend path: ${backendPath}`);
+  console.log(`Command: ${command} ${args.join(' ')}`);
+
+  // Check if backend path exists
+  if (!fs.existsSync(backendPath)) {
+    console.error(`Backend path does not exist: ${backendPath}`);
+    return;
+  }
+
+  backendProcess = spawn(command, args, {
     cwd: backendPath,
     stdio: 'pipe',
+    env: process.env
   });
 
   backendProcess.stdout.on('data', (data) => {
@@ -130,6 +154,10 @@ function startBackend() {
 
   backendProcess.on('close', (code) => {
     console.log(`Backend process exited with code ${code}`);
+  });
+
+  backendProcess.on('error', (error) => {
+    console.error(`Backend spawn error: ${error.message}`);
   });
 }
 
