@@ -8,6 +8,23 @@ import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { MessageCircle, Code, TrendingUp, Settings, Users, BarChart3, Activity, DollarSign, Zap, Target } from 'lucide-react';
 
+interface AgentStatus {
+  status: string;
+  active_agents: string[];
+  system_stats: {
+    cpu_usage: number;
+    memory_usage: string;
+    connections: number;
+    uptime: string;
+  };
+  performance: {
+    signals_per_hour: number;
+    accuracy: number;
+    latency: string;
+    queue_size: number;
+  };
+}
+
 interface FeedItem {
   symbol: string;
   price: number;
@@ -42,6 +59,7 @@ const Dashboard: React.FC = () => {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [marketOverview, setMarketOverview] = useState<MarketOverview>({});
   const [settings, setSettings] = useState<Settings>({ scanInterval: 300, symbols: [] });
+  const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +93,17 @@ const Dashboard: React.FC = () => {
         if (!settingsResponse.ok) throw new Error('Failed to fetch settings');
         const settingsData = await settingsResponse.json();
         setSettings(settingsData);
+
+        // Fetch agent status
+        try {
+          const agentResponse = await fetch(`${API_BASE}/agents/status`);
+          if (agentResponse.ok) {
+            const agentData = await agentResponse.json();
+            setAgentStatus(agentData);
+          }
+        } catch (agentError) {
+          console.warn('Agent status failed to load:', agentError);
+        }
         
         logger.info('Dashboard data loaded successfully (REAL AGENT DATA)');
       } catch (err) {
