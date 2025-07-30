@@ -232,8 +232,8 @@ cat > "$APPLICATIONS_DIR/GremlinTrader.desktop" << EOF
 Name=Gremlin ShadTail Trader
 Comment=Professional AI Trading System
 GenericName=Trading Platform
-Exec=$HOME/Gremlin-ShadTail-Trader/scripts/launch-gremlin-trader.sh
-Icon=$HOME/Gremlin-ShadTail-Trader/resources/icon.png
+Exec=$PROJECT_ROOT/scripts/launch-gremlin-trader.sh
+Icon=$PROJECT_ROOT/resources/icon.png
 Type=Application
 Categories=Office;Finance;Development;
 StartupNotify=true

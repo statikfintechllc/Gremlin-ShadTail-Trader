@@ -30,24 +30,16 @@ if [ -f "dist-electron/linux-unpacked/gremlin-shadtail-trader" ]; then
     "./dist-electron/linux-unpacked/gremlin-shadtail-trader" \
         --no-sandbox \
         --disable-dev-shm-usage \
-        --disable-gpu \
         --disable-web-security \
-        --allow-running-insecure-content \
-        --disable-features=VizDisplayCompositor &
+        --allow-running-insecure-content &
 elif [ -f "dist-electron/Gremlin ShadTail Trader-1.0.0.AppImage" ]; then
     echo "📱 Launching AppImage..."
     chmod +x "dist-electron/Gremlin ShadTail Trader-1.0.0.AppImage"
     "dist-electron/Gremlin ShadTail Trader-1.0.0.AppImage" \
         --no-sandbox \
         --disable-dev-shm-usage \
-        --disable-gpu \
         --disable-web-security \
-        --allow-running-insecure-content \
-        --disable-features=VizDisplayCompositor & \
-        --disable-gpu \
-        --disable-web-security \
-        --allow-running-insecure-content \
-        --disable-features=VizDisplayCompositor &
+        --allow-running-insecure-content &
 else
     echo "🔧 No packaged version found, launching development version..."
     launch_dev
