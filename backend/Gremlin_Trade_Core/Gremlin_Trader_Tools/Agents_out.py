@@ -416,18 +416,3 @@ except Exception as e:
     agents_out_logger.error(f"Error initializing agent output handler: {e}")
 
 if __name__ == "__main__":
-    # Test the output handler
-    test_logs = [
-        {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "type": "signal",
-            "symbol": "GPRO",
-            "signal_type": "ema_cross_bullish",
-            "confidence": 0.8,
-            "price": 2.15,
-            "volume": 1500000
-        }
-    ]
-    
-    process_agent_logs(test_logs)
-    agents_out_logger.info("Test completed successfully")
