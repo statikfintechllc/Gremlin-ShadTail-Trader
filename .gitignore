@@ -11,6 +11,8 @@ __pycache__/
 
 # Build outputs
 frontend/dist/
+frontend/pkg/mod/
+frontend/pkg/sumdb/
 frontend/.astro/
 backend/dist/
 dist-electron/
