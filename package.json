@@ -7,16 +7,16 @@
   "scripts": {
     "install-all": "./scripts/install-all",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:electron\"",
-    "dev:backend": "cd backend && poetry run uvicorn dashboard_backend.server:app --host 0.0.0.0 --port 8000 --reload",
+    "dev:backend": "cd backend && poetry run uvicorn server:app --host 0.0.0.0 --port 8000 --reload",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:electron": "wait-on http://localhost:4321 && cross-env NODE_ENV=development electron .",
-    "build": "npm run build:frontend && npm run build:backend",
+    "build": "npm run build:frontend",
     "build:frontend": "cd frontend && npm run build",
-    "build:backend": "cd backend && poetry build",
+    "build:backend": "cd backend && mkdir -p dist && cp -r Gremlin_Trade_Core Gremlin_Trade_Memory server.py pyproject.toml poetry.lock dist/ && echo 'Backend built to backend/dist/'",
     "start": "npm run build && node scripts/bootstrap.js",
     "start:safe": "npm run build && electron . --no-sandbox --disable-dev-shm-usage --disable-gpu",
     "start:display": "npm run build && DISPLAY=:0 electron . --no-sandbox --disable-dev-shm-usage",
-    "start:backend": "cd backend && poetry run uvicorn dashboard_backend.server:app --host 0.0.0.0 --port 8000",
+    "start:backend": "cd backend && poetry run uvicorn server:app --host 0.0.0.0 --port 8000",
     "start:frontend": "cd frontend && npm run preview",
     "clean": "rimraf frontend/dist frontend/node_modules backend/dist .venv dist-electron",
     "lint": "npm run lint:frontend",
@@ -72,8 +72,6 @@
         "to": "scripts"
       }
     ],
-    "beforeBuild": "scripts/prebuild.js",
-    "afterPack": "scripts/postpack.js",
     "mac": {
       "category": "public.app-category.finance",
       "icon": "resources/icon.icns",

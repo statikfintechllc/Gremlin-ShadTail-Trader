@@ -22,7 +22,7 @@ import sys
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from dashboard_backend.Gremlin_Trade_Core.globals import setup_module_logger
+from Gremlin_Trade_Core.globals import setup_module_logger
 
 # Initialize logger
 market_logger = setup_module_logger("market_data", "market_service")

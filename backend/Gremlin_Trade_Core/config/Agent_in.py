@@ -13,7 +13,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from dashboard_backend.Gremlin_Trade_Core.globals import (
+from Gremlin_Trade_Core.globals import (
     CFG, MEM, logger, setup_module_logger,
     embed_text, package_embedding,
     recursive_scan, run_scanner,
@@ -63,7 +63,7 @@ class AgentCoordinator:
     def initialize_ibkr_agent(self):
         """Initialize Interactive Brokers agent"""
         try:
-            from dashboard_backend.Gremlin_Trade_Core.Gremlin_Trader_Tools.Trade_Agent.IBKR_API_trader import IBKRAgent
+            from Gremlin_Trade_Core.Gremlin_Trader_Tools.Trade_Agent.IBKR_API_trader import IBKRAgent
             
             ibkr_config = CFG.get("agents", {}).get("ibkr", {})
             self.agents["ibkr"] = IBKRAgent(ibkr_config)
@@ -77,7 +77,7 @@ class AgentCoordinator:
     def initialize_scanner_agent(self):
         """Initialize scanner agent for penny stock detection"""
         try:
-            from dashboard_backend.Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.signal_generator import generate_signals
+            from Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.signal_generator import generate_signals
             
             self.agents["scanner"] = {
                 "generate_signals": generate_signals,
@@ -105,7 +105,7 @@ class AgentCoordinator:
     def initialize_memory_agent(self):
         """Initialize memory and embedding agent"""
         try:
-            from dashboard_backend.Gremlin_Trade_Memory.embedder import package_embedding, get_all_embeddings
+            from Gremlin_Trade_Memory.embedder import package_embedding, get_all_embeddings
             
             self.agents["memory"] = {
                 "embedder": package_embedding,
@@ -294,7 +294,7 @@ class AgentCoordinator:
                 return
             
             # Write logs to Agent.out file
-            from dashboard_backend.Gremlin_Trade_Core.Gremlin_Trader_Tools.Agents_out import process_agent_logs
+            from Gremlin_Trade_Core.Gremlin_Trader_Tools.Agents_out import process_agent_logs
             process_agent_logs(self.log_queue)
             
             # Clear queue
@@ -311,7 +311,7 @@ class AgentCoordinator:
                 return
             
             # Process memory queue
-            from dashboard_backend.Gremlin_Trade_Memory.embedder import store_embedding
+            from Gremlin_Trade_Memory.embedder import store_embedding
             
             for embedding in self.memory_queue:
                 store_embedding(embedding)

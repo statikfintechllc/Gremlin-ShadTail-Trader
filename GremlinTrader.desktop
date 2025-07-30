@@ -1,13 +1,13 @@
 [Desktop Entry]
-Version=1.0
-Type=Application
 Name=Gremlin ShadTail Trader
-Comment=AI-Powered Autonomous Trading Platform
-Exec=/home/statiksmoke8/Gremlin-ShadTail-Trader/launch-gremlin-trader.sh
-Icon=/home/statiksmoke8/Gremlin-ShadTail-Trader/resources/icon.png
-Path=/home/statiksmoke8/Gremlin-ShadTail-Trader
-Terminal=false
-Categories=Office;Finance;
+Comment=Professional AI Trading System
+GenericName=Trading Platform
+Exec=$HOME/Gremlin-ShadTail-Trader/scripts/launch-gremlin-trader.sh
+Icon=$HOME/Gremlin-ShadTail-Trader/resources/icon.png
+Type=Application
+Categories=Office;Finance;Development;
 StartupNotify=true
-X-GNOME-UsesNotifications=true
-MimeType=application/x-trading-data;
+Terminal=false
+StartupWMClass=gremlin-shadtail-trader
+Keywords=trading;finance;ai;crypto;stocks;
+MimeType=application/x-trading-config;

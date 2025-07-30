@@ -22,13 +22,13 @@
 
 # trading_core/stock_scraper.py
 
-from dashboard_backend.globals import random
-from datetime from dashboard_backend.globals import datetime
+from globals import random
+from datetime from globals import datetime
 from utils.logging_config import setup_module_logger
 
 # Initialize module-specific logger
 logger = setup_module_logger("trading_core", "stock_scraper")
-from dashboard_backend.globals import asyncio
+from globals import asyncio
 
 WATERMARK = "source:GremlinGPT"
 ORIGIN = "stock_scraper"

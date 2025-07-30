@@ -231,10 +231,10 @@ export default function SourceEditor({ apiBaseUrl = 'http://localhost:8000' }: S
   };
 
   return (
-    <div className="flex h-full bg-gray-900 text-white">
+    <div className="flex h-full bg-gray-900 text-white overflow-hidden">
       {/* File Explorer */}
       <div className="w-64 border-r border-gray-700 flex flex-col">
-        <div className="p-4 border-b border-gray-700">
+        <div className="p-4 border-b border-gray-700 flex-shrink-0">
           <h3 className="text-lg font-semibold mb-2">Source Explorer</h3>
           <div className="flex space-x-2">
             <button
@@ -247,14 +247,32 @@ export default function SourceEditor({ apiBaseUrl = 'http://localhost:8000' }: S
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-2">
-          {renderFileTree(fileTree)}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
+              <span className="ml-2 text-sm text-gray-400">Loading files...</span>
+            </div>
+          ) : fileTree.length > 0 ? (
+            renderFileTree(fileTree)
+          ) : (
+            <div className="text-center py-8">
+              <Folder className="w-12 h-12 text-gray-500 mx-auto mb-2" />
+              <p className="text-sm text-gray-400">No files found</p>
+              <button 
+                onClick={loadFileTree}
+                className="mt-2 text-xs text-blue-400 hover:text-blue-300"
+              >
+                Retry
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Editor Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Toolbar */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <div className="flex items-center justify-between p-4 border-b border-gray-700 flex-shrink-0">
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-400">
               {selectedFile || 'No file selected'}
@@ -300,7 +318,7 @@ export default function SourceEditor({ apiBaseUrl = 'http://localhost:8000' }: S
         </div>
 
         {/* Editor */}
-        <div className="flex-1">
+        <div className="flex-1 overflow-hidden">
           {selectedFile ? (
             <Editor
               height="100%"
@@ -325,6 +343,9 @@ export default function SourceEditor({ apiBaseUrl = 'http://localhost:8000' }: S
               <div className="text-center">
                 <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
                 <p>Select a file to start editing</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Files will load from the Gremlin-ShadTail-Trader project
+                </p>
               </div>
             </div>
           )}

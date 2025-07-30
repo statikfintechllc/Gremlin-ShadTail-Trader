@@ -19,6 +19,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getConfig: () => ipcRenderer.invoke('get-config'),
   saveConfig: (config) => ipcRenderer.invoke('save-config', config),
   
+  // File system access for Monaco editor
+  getProjectFiles: () => ipcRenderer.invoke('get-project-files'),
+  readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
+  writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
+  
   // Logging (send logs to main process)
   logToMain: (level, message, data) => {
     ipcRenderer.send('log-message', { level, message, data, timestamp: new Date().toISOString() });

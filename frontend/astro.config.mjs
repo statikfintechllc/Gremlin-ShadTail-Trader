@@ -13,8 +13,12 @@ export default defineConfig({
     assetsPrefix: './' // Ensure all assets use relative paths
   },
   vite: {
+    optimizeDeps: {
+      exclude: ['monaco-editor']
+    },
     build: {
       rollupOptions: {
+        external: ['monaco-editor'],
         output: {
           assetFileNames: '_astro/[name]-[hash][extname]',
           chunkFileNames: '_astro/[name]-[hash].js',

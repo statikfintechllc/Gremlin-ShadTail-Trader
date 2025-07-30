@@ -15,7 +15,7 @@ from typing import List, Dict, Any
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from dashboard_backend.Gremlin_Trade_Core.globals import (
+from Gremlin_Trade_Core.globals import (
     logger, setup_module_logger, CFG, MEM,
     LOGS_DIR, STRATEGIES_DIR, METADATA_DB_PATH
 )

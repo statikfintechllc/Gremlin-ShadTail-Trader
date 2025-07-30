@@ -147,7 +147,7 @@ class GremlinBootstrap {
         const backendCmd = 'poetry';
         const backendArgs = [
             'run', 'uvicorn', 
-            'dashboard_backend.server:app',
+            'server:app',
             '--host', '0.0.0.0',
             '--port', BACKEND_PORT.toString(),
             '--log-level', 'info'

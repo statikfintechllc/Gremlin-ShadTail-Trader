@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { logger } from '../utils/logger';
 import GrokChat from './GrokChat';
 import SourceEditor from './SourceEditor';
+// Monaco Editor - dynamically imported to handle SSR
+const MonacoEditor = React.lazy(() => import('./MonacoEditor'));
 import SettingsComponent from './Settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -9,19 +11,36 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { MessageCircle, Code, TrendingUp, Settings, Users, BarChart3, Activity, DollarSign, Zap, Target } from 'lucide-react';
 
 interface AgentStatus {
-  status: string;
-  active_agents: string[];
-  system_stats: {
+  trading_agents: {
+    [key: string]: {
+      name: string;
+      status: string;
+      cpu: number;
+      gpu: number;
+      memory: string;
+      uptime: string;
+      last_signal: string;
+      last_trade: string;
+      error?: string;
+      performance?: {
+        win_rate: number;
+        avg_profit: number;
+        avg_loss: number;
+        total_trades: number;
+      };
+    };
+  };
+  system_status: {
     cpu_usage: number;
-    memory_usage: string;
+    memory: string;
     connections: number;
     uptime: string;
   };
   performance: {
     signals_per_hour: number;
     accuracy: number;
-    latency: string;
-    queue_size: number;
+    latency: number;
+    queue: number;
   };
 }
 
@@ -54,6 +73,396 @@ interface Settings {
 
 type TabType = 'trading' | 'chat' | 'source' | 'agents' | 'settings';
 
+// Settings Component
+const SettingsComponent: React.FC<{
+  settings: Settings;
+  onUpdateSettings: (settings: Settings) => void;
+}> = ({ settings, onUpdateSettings }) => {
+  const [config, setConfig] = useState(settings);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onUpdateSettings(config);
+      
+      // Save to backend via Electron API if available
+      if (window.electronAPI) {
+        await window.electronAPI.saveConfig(config);
+      }
+      
+      // Success feedback could be added here
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const renderExchangeSettings = () => (
+    <Card className="bg-trading-gray-200/10 border-trading-gray-300">
+      <CardHeader>
+        <CardTitle className="text-trading-gold flex items-center">
+          <DollarSign className="w-5 h-5 mr-2" />
+          Exchange Settings
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-trading-bronze text-sm">API Key</label>
+            <input
+              type="password"
+              value={config.exchange.apiKey || ''}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                exchange: { ...prev.exchange, apiKey: e.target.value }
+              }))}
+              className="w-full p-2 rounded bg-trading-gray-100/20 border border-trading-gray-300 text-trading-gold"
+              placeholder="Enter API Key"
+            />
+          </div>
+          <div>
+            <label className="text-trading-bronze text-sm">Secret Key</label>
+            <input
+              type="password"
+              value={config.exchange.secretKey || ''}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                exchange: { ...prev.exchange, secretKey: e.target.value }
+              }))}
+              className="w-full p-2 rounded bg-trading-gray-100/20 border border-trading-gray-300 text-trading-gold"
+              placeholder="Enter Secret Key"
+            />
+          </div>
+          <div>
+            <label className="text-trading-bronze text-sm">Exchange</label>
+            <select
+              value={config.exchange.name}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                exchange: { ...prev.exchange, name: e.target.value }
+              }))}
+              className="w-full p-2 rounded bg-trading-gray-100/20 border border-trading-gray-300 text-trading-gold"
+            >
+              <option value="binance">Binance</option>
+              <option value="coinbase">Coinbase Pro</option>
+              <option value="kraken">Kraken</option>
+              <option value="bybit">Bybit</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-trading-bronze text-sm">Environment</label>
+            <select
+              value={config.exchange.environment}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                exchange: { ...prev.exchange, environment: e.target.value }
+              }))}
+              className="w-full p-2 rounded bg-trading-gray-100/20 border border-trading-gray-300 text-trading-gold"
+            >
+              <option value="sandbox">Sandbox</option>
+              <option value="production">Production</option>
+            </select>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            checked={config.exchange.testMode || false}
+            onChange={(e) => setConfig(prev => ({
+              ...prev,
+              exchange: { ...prev.exchange, testMode: e.target.checked }
+            }))}
+            className="rounded border-trading-gray-300"
+          />
+          <label className="text-trading-bronze">Test Mode (Paper Trading)</label>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderRiskSettings = () => (
+    <Card className="bg-trading-gray-200/10 border-trading-gray-300">
+      <CardHeader>
+        <CardTitle className="text-trading-gold flex items-center">
+          <Shield className="w-5 h-5 mr-2" />
+          Risk Management
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="text-trading-bronze text-sm">Max Position Size (%)</label>
+            <input
+              type="number"
+              min="1"
+              max="100"
+              value={config.risk.maxPositionSize || 10}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                risk: { ...prev.risk, maxPositionSize: parseFloat(e.target.value) }
+              }))}
+              className="w-full p-2 rounded bg-trading-gray-100/20 border border-trading-gray-300 text-trading-gold"
+            />
+          </div>
+          <div>
+            <label className="text-trading-bronze text-sm">Max Daily Loss (%)</label>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              value={config.risk.maxDailyLoss || 5}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                risk: { ...prev.risk, maxDailyLoss: parseFloat(e.target.value) }
+              }))}
+              className="w-full p-2 rounded bg-trading-gray-100/20 border border-trading-gray-300 text-trading-gold"
+            />
+          </div>
+          <div>
+            <label className="text-trading-bronze text-sm">Stop Loss (%)</label>
+            <input
+              type="number"
+              min="0.1"
+              max="20"
+              step="0.1"
+              value={config.risk.stopLossPercent || 2}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                risk: { ...prev.risk, stopLossPercent: parseFloat(e.target.value) }
+              }))}
+              className="w-full p-2 rounded bg-trading-gray-100/20 border border-trading-gray-300 text-trading-gold"
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={config.risk.emergencyStop || false}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                risk: { ...prev.risk, emergencyStop: e.target.checked }
+              }))}
+              className="rounded border-trading-gray-300"
+            />
+            <label className="text-trading-bronze">Emergency Stop</label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={config.risk.portfolioRebalancing || false}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                risk: { ...prev.risk, portfolioRebalancing: e.target.checked }
+              }))}
+              className="rounded border-trading-gray-300"
+            />
+            <label className="text-trading-bronze">Auto Rebalancing</label>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderNotificationSettings = () => (
+    <Card className="bg-trading-gray-200/10 border-trading-gray-300">
+      <CardHeader>
+        <CardTitle className="text-trading-gold flex items-center">
+          <Bell className="w-5 h-5 mr-2" />
+          Notifications
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={config.notifications.tradeAlerts || false}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                notifications: { ...prev.notifications, tradeAlerts: e.target.checked }
+              }))}
+              className="rounded border-trading-gray-300"
+            />
+            <label className="text-trading-bronze">Trade Alerts</label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={config.notifications.riskAlerts || false}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                notifications: { ...prev.notifications, riskAlerts: e.target.checked }
+              }))}
+              className="rounded border-trading-gray-300"
+            />
+            <label className="text-trading-bronze">Risk Alerts</label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={config.notifications.systemAlerts || false}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                notifications: { ...prev.notifications, systemAlerts: e.target.checked }
+              }))}
+              className="rounded border-trading-gray-300"
+            />
+            <label className="text-trading-bronze">System Alerts</label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={config.notifications.emailNotifications || false}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                notifications: { ...prev.notifications, emailNotifications: e.target.checked }
+              }))}
+              className="rounded border-trading-gray-300"
+            />
+            <label className="text-trading-bronze">Email Notifications</label>
+          </div>
+        </div>
+        
+        {config.notifications.emailNotifications && (
+          <div>
+            <label className="text-trading-bronze text-sm">Email Address</label>
+            <input
+              type="email"
+              value={config.notifications.email || ''}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                notifications: { ...prev.notifications, email: e.target.value }
+              }))}
+              className="w-full p-2 rounded bg-trading-gray-100/20 border border-trading-gray-300 text-trading-gold"
+              placeholder="Enter email address"
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderSystemSettings = () => (
+    <Card className="bg-trading-gray-200/10 border-trading-gray-300">
+      <CardHeader>
+        <CardTitle className="text-trading-gold flex items-center">
+          <Settings className="w-5 h-5 mr-2" />
+          System Settings
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-trading-bronze text-sm">Log Level</label>
+            <select
+              value={config.system.logLevel || 'info'}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                system: { ...prev.system, logLevel: e.target.value }
+              }))}
+              className="w-full p-2 rounded bg-trading-gray-100/20 border border-trading-gray-300 text-trading-gold"
+            >
+              <option value="debug">Debug</option>
+              <option value="info">Info</option>
+              <option value="warn">Warning</option>
+              <option value="error">Error</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-trading-bronze text-sm">Update Frequency (ms)</label>
+            <input
+              type="number"
+              min="100"
+              max="10000"
+              step="100"
+              value={config.system.updateFrequency || 1000}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                system: { ...prev.system, updateFrequency: parseInt(e.target.value) }
+              }))}
+              className="w-full p-2 rounded bg-trading-gray-100/20 border border-trading-gray-300 text-trading-gold"
+            />
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={config.system.autoStart || false}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                system: { ...prev.system, autoStart: e.target.checked }
+              }))}
+              className="rounded border-trading-gray-300"
+            />
+            <label className="text-trading-bronze">Auto-start on Launch</label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={config.system.darkMode || true}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                system: { ...prev.system, darkMode: e.target.checked }
+              }))}
+              className="rounded border-trading-gray-300"
+            />
+            <label className="text-trading-bronze">Dark Mode</label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={config.system.enableTelemetry || false}
+              onChange={(e) => setConfig(prev => ({
+                ...prev,
+                system: { ...prev.system, enableTelemetry: e.target.checked }
+              }))}
+              className="rounded border-trading-gray-300"
+            />
+            <label className="text-trading-bronze">Enable Telemetry</label>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {renderExchangeSettings()}
+        {renderRiskSettings()}
+        {renderNotificationSettings()}
+        {renderSystemSettings()}
+      </div>
+      
+      {/* Save Button */}
+      <div className="border-t border-trading-gray-300 p-4 bg-trading-gray-200/10">
+        <div className="flex justify-end space-x-4">
+          <button
+            onClick={() => setConfig(settings)}
+            className="px-6 py-2 rounded border border-trading-gray-300 text-trading-bronze hover:text-trading-gold hover:border-trading-gold transition-colors"
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="px-6 py-2 rounded bg-trading-gold text-trading-black hover:bg-trading-bronze transition-colors disabled:opacity-50"
+          >
+            {isSaving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('trading');
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -62,10 +471,12 @@ const Dashboard: React.FC = () => {
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   const API_BASE = 'http://localhost:8000/api';
 
   useEffect(() => {
+    setIsClient(true);
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -142,7 +553,10 @@ const Dashboard: React.FC = () => {
   };
 
   const renderTradingTab = () => (
-    <div className="h-full p-6 space-y-6">
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6 space-y-6">
       {error && (
         <Card className="border-destructive bg-destructive/10">
           <CardHeader>
@@ -370,17 +784,66 @@ const Dashboard: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   );
 
+  // Agent control functions
+  const controlAgent = async (agent: string, action: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/agents/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent }),
+      });
+      
+      if (!response.ok) throw new Error(`Failed to ${action} ${agent}`);
+      
+      // Refresh agent status after action
+      const agentResponse = await fetch(`${API_BASE}/agents/status`);
+      if (agentResponse.ok) {
+        const agentData = await agentResponse.json();
+        setAgentStatus(agentData);
+      }
+      
+      logger.info(`${agent} ${action} completed successfully`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : `Failed to ${action} ${agent}`;
+      setError(errorMessage);
+      logger.error(`Agent control error:`, errorMessage);
+    }
+  };
+
   const renderAgentsTab = () => (
-    <div className="h-full p-6 space-y-6">
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Fixed header */}
+      <div className="flex-shrink-0 p-6 pb-4 border-b border-trading-gray-300">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-trading-gold">Agent Control Center</h2>
+            <p className="text-sm text-trading-bronze mt-1">Individual control panels for each autonomous trading agent</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className={`w-3 h-3 rounded-full ${agentStatus ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+            <span className="text-xs text-trading-gold font-medium">
+              {agentStatus ? 'SYSTEM ONLINE' : 'SYSTEM OFFLINE'}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6 space-y-6">
       <Card className="bg-gradient-to-br from-trading-black to-trading-gray-200 border-trading-gray-300">
         <CardHeader>
           <CardTitle className="flex items-center text-xl">
             <Users className="w-5 h-5 mr-2 text-trading-gold" />
             Agent Control Center
-            <span className="ml-2 text-xs bg-trading-gold/20 text-trading-gold px-2 py-1 rounded">LIVE</span>
+            <span className="ml-2 text-xs bg-trading-gold/20 text-trading-gold px-2 py-1 rounded">
+              {agentStatus ? 'LIVE' : 'OFFLINE'}
+            </span>
           </CardTitle>
           <CardDescription className="text-trading-bronze">Individual control panels for each autonomous trading agent</CardDescription>
         </CardHeader>
@@ -390,209 +853,461 @@ const Dashboard: React.FC = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-trading-gold"></div>
               <p className="ml-4 text-trading-bronze">Loading agent controls...</p>
             </div>
+          ) : !agentStatus ? (
+            <div className="text-center py-12">
+              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">Unable to connect to agent system</p>
+              <p className="text-sm text-muted-foreground/70">Check if backend is running</p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                variant="outline" 
+                size="sm"
+                className="mt-4"
+              >
+                Retry Connection
+              </Button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Scanner Agent Control Panel */}
-              <Card className="bg-gradient-to-br from-blue-900/20 to-blue-800/20 border-blue-800/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between text-lg text-blue-300">
-                    <span>Scanner Agent</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-blue-400">ACTIVE</span>
-                    </div>
-                  </CardTitle>
-                  <CardDescription className="text-sm text-trading-bronze">Market scanning and opportunity detection</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <span className="text-trading-bronze">CPU:</span>
-                      <span className="ml-2 text-blue-400">12.5%</span>
-                    </div>
-                    <div>
-                      <span className="text-trading-bronze">Memory:</span>
-                      <span className="ml-2 text-blue-400">180MB</span>
-                    </div>
-                    <div>
-                      <span className="text-trading-bronze">Uptime:</span>
-                      <span className="ml-2 text-blue-400">2h 15m</span>
-                    </div>
-                    <div>
-                      <span className="text-trading-bronze">Scans:</span>
-                      <span className="ml-2 text-blue-400">1,247</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-trading-bronze">Scan Interval (seconds):</label>
-                    <input type="number" defaultValue={30} className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-trading-bronze">Min Volume Filter:</label>
-                    <input type="number" defaultValue={100000} className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded" />
-                  </div>
-                  <div className="flex space-x-2">
-                    <button className="flex-1 px-3 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded">START</button>
-                    <button className="flex-1 px-3 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded">STOP</button>
-                    <button className="flex-1 px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded">RESTART</button>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Dynamic Agent Control Panels */}
+              {agentStatus.trading_agents && Object.entries(agentStatus.trading_agents).map(([agentKey, agent]) => {
+                const agentConfig = {
+                  scanner_agent: { color: 'blue', icon: '🔍', description: 'Market scanning and opportunity detection' },
+                  strategy_agent: { color: 'purple', icon: '⚡', description: 'Trading strategy execution and signal generation' },
+                  risk_agent: { color: 'orange', icon: '🛡️', description: 'Portfolio protection and risk assessment' },
+                  memory_agent: { color: 'green', icon: '🧠', description: 'Knowledge retention and pattern learning' }
+                }[agentKey] || { color: 'gray', icon: '🤖', description: 'Agent control panel' };
 
-              {/* Strategy Agent Control Panel */}
-              <Card className="bg-gradient-to-br from-purple-900/20 to-purple-800/20 border-purple-800/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between text-lg text-purple-300">
-                    <span>Strategy Agent</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-purple-400">ACTIVE</span>
-                    </div>
-                  </CardTitle>
-                  <CardDescription className="text-sm text-trading-bronze">Trading strategy execution and signal generation</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <span className="text-trading-bronze">CPU:</span>
-                      <span className="ml-2 text-purple-400">8.3%</span>
-                    </div>
-                    <div>
-                      <span className="text-trading-bronze">Memory:</span>
-                      <span className="ml-2 text-purple-400">95MB</span>
-                    </div>
-                    <div>
-                      <span className="text-trading-bronze">Signals:</span>
-                      <span className="ml-2 text-purple-400">342</span>
-                    </div>
-                    <div>
-                      <span className="text-trading-bronze">Accuracy:</span>
-                      <span className="ml-2 text-purple-400">87.2%</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-trading-bronze">Active Strategy:</label>
-                    <select className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded">
-                      <option>Mean Reversion</option>
-                      <option>Momentum</option>
-                      <option>Breakout</option>
-                      <option>Scalping</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-trading-bronze">Risk Level:</label>
-                    <select className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded">
-                      <option>Conservative</option>
-                      <option>Moderate</option>
-                      <option>Aggressive</option>
-                    </select>
-                  </div>
-                  <div className="flex space-x-2">
-                    <button className="flex-1 px-3 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded">START</button>
-                    <button className="flex-1 px-3 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded">STOP</button>
-                    <button className="flex-1 px-3 py-1 text-xs bg-purple-600 hover:bg-purple-500 text-white rounded">OPTIMIZE</button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Risk Management Agent Control Panel */}
-              <Card className="bg-gradient-to-br from-orange-900/20 to-orange-800/20 border-orange-800/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between text-lg text-orange-300">
-                    <span>Risk Management Agent</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-orange-400">MONITORING</span>
-                    </div>
-                  </CardTitle>
-                  <CardDescription className="text-sm text-trading-bronze">Portfolio protection and risk assessment</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <span className="text-trading-bronze">CPU:</span>
-                      <span className="ml-2 text-orange-400">5.1%</span>
-                    </div>
-                    <div>
-                      <span className="text-trading-bronze">Memory:</span>
-                      <span className="ml-2 text-orange-400">45MB</span>
-                    </div>
-                    <div>
-                      <span className="text-trading-bronze">Risk Score:</span>
-                      <span className="ml-2 text-orange-400">3.2/10</span>
-                    </div>
-                    <div>
-                      <span className="text-trading-bronze">Alerts:</span>
-                      <span className="ml-2 text-orange-400">7</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-trading-bronze">Max Position Size (%):</label>
-                    <input type="number" defaultValue={5} max={25} className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-trading-bronze">Stop Loss (%):</label>
-                    <input type="number" defaultValue={2} max={10} step={0.1} className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded" />
-                  </div>
-                  <div className="flex space-x-2">
-                    <button className="flex-1 px-3 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded">ENABLE</button>
-                    <button className="flex-1 px-3 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded">DISABLE</button>
-                    <button className="flex-1 px-3 py-1 text-xs bg-orange-600 hover:bg-orange-500 text-white rounded">CONFIG</button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Memory Agent Control Panel */}
-              <Card className="bg-gradient-to-br from-green-900/20 to-green-800/20 border-green-800/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between text-lg text-green-300">
-                    <span>Memory Agent</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-green-400">ACTIVE</span>
-                    </div>
-                  </CardTitle>
-                  <CardDescription className="text-sm text-trading-bronze">Knowledge retention and pattern learning</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                      <span className="text-trading-bronze">CPU:</span>
-                      <span className="ml-2 text-green-400">15.2%</span>
-                    </div>
-                    <div>
-                      <span className="text-trading-bronze">Memory:</span>
-                      <span className="ml-2 text-green-400">210MB</span>
-                    </div>
-                    <div>
-                      <span className="text-trading-bronze">Patterns:</span>
-                      <span className="ml-2 text-green-400">8,943</span>
-                    </div>
-                    <div>
-                      <span className="text-trading-bronze">DB Size:</span>
-                      <span className="ml-2 text-green-400">2.3GB</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-trading-bronze">Learning Rate:</label>
-                    <select className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded">
-                      <option>Fast</option>
-                      <option>Normal</option>
-                      <option>Slow</option>
-                      <option>Conservative</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs text-trading-bronze">Memory Retention (days):</label>
-                    <input type="number" defaultValue={30} min={7} max={365} className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded" />
-                  </div>
-                  <div className="flex space-x-2">
-                    <button className="flex-1 px-3 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded">START</button>
-                    <button className="flex-1 px-3 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded">CLEAR</button>
-                    <button className="flex-1 px-3 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded">BACKUP</button>
-                  </div>
-                </CardContent>
-              </Card>
+                const isActive = agent.status === 'active' || agent.status === 'monitoring';
+                
+                return (
+                  <Card key={agentKey} className={`bg-gradient-to-br from-${agentConfig.color}-900/20 to-${agentConfig.color}-800/20 border-${agentConfig.color}-800/50`}>
+                    <CardHeader>
+                      <CardTitle className={`flex items-center justify-between text-lg text-${agentConfig.color}-300`}>
+                        <span>{agentConfig.icon} {agent.name}</span>
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-2 h-2 bg-${agentConfig.color}-500 rounded-full ${isActive ? 'animate-pulse' : ''}`}></div>
+                          <span className={`text-xs text-${agentConfig.color}-400 uppercase`}>
+                            {agent.status}
+                          </span>
+                        </div>
+                      </CardTitle>
+                      <CardDescription className="text-sm text-trading-bronze">{agentConfig.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 text-xs">
+                        <div>
+                          <span className="text-trading-bronze">CPU:</span>
+                          <span className={`ml-2 text-${agentConfig.color}-400`}>{agent.cpu}%</span>
+                        </div>
+                        <div>
+                          <span className="text-trading-bronze">Memory:</span>
+                          <span className={`ml-2 text-${agentConfig.color}-400`}>{agent.memory}</span>
+                        </div>
+                        <div>
+                          <span className="text-trading-bronze">Uptime:</span>
+                          <span className={`ml-2 text-${agentConfig.color}-400`}>{agent.uptime}</span>
+                        </div>
+                        <div>
+                          <span className="text-trading-bronze">Status:</span>
+                          <span className={`ml-2 text-${agentConfig.color}-400`}>{agent.status}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Agent-specific controls */}
+                      {agentKey === 'scanner_agent' && (
+                        <div className="space-y-3 pt-3 border-t border-trading-gray-300">
+                          <h4 className="text-sm font-semibold text-trading-gold">📊 Scanner Configuration</h4>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Scan Interval (sec)</label>
+                              <input 
+                                type="number" 
+                                defaultValue={30} 
+                                min={5} 
+                                max={300}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded" 
+                                title="Time between market scans"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Market Depth</label>
+                              <select 
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Order book analysis depth"
+                              >
+                                <option value="5">Level 1 (Top 5)</option>
+                                <option value="10">Level 2 (Top 10)</option>
+                                <option value="20">Level 3 (Top 20)</option>
+                              </select>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="text-xs text-trading-bronze block mb-1">Active Symbols</label>
+                            <input 
+                              type="text" 
+                              defaultValue="BTC,ETH,SOL,MATIC,ADA"
+                              className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                              placeholder="Comma-separated symbols"
+                              title="Trading symbols to monitor"
+                            />
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Min Volume (24h)</label>
+                              <input 
+                                type="number" 
+                                defaultValue={1000000} 
+                                min={10000}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Minimum 24h volume filter"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Price Change %</label>
+                              <input 
+                                type="number" 
+                                defaultValue={3} 
+                                min={0.1} 
+                                max={50} 
+                                step={0.1}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Minimum price change to trigger"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-2">
+                            <label className="flex items-center text-xs">
+                              <input type="checkbox" defaultChecked className="mr-1" />
+                              <span className="text-trading-bronze">Volume Analysis</span>
+                            </label>
+                            <label className="flex items-center text-xs">
+                              <input type="checkbox" defaultChecked className="mr-1" />
+                              <span className="text-trading-bronze">Price Patterns</span>
+                            </label>
+                            <label className="flex items-center text-xs">
+                              <input type="checkbox" className="mr-1" />
+                              <span className="text-trading-bronze">Bollinger Bands</span>
+                            </label>
+                            <label className="flex items-center text-xs">
+                              <input type="checkbox" defaultChecked className="mr-1" />
+                              <span className="text-trading-bronze">RSI Signals</span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {agentKey === 'strategy_agent' && (
+                        <div className="space-y-3 pt-3 border-t border-trading-gray-300">
+                          <h4 className="text-sm font-semibold text-trading-gold">⚡ Strategy Configuration</h4>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Primary Strategy</label>
+                              <select 
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Main trading strategy"
+                              >
+                                <option>Mean Reversion</option>
+                                <option>Momentum</option>
+                                <option>Breakout</option>
+                                <option>Scalping</option>
+                                <option>Grid Trading</option>
+                                <option>DCA (Dollar Cost Average)</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Risk Level</label>
+                              <select 
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Overall risk tolerance"
+                              >
+                                <option>Conservative</option>
+                                <option>Moderate</option>
+                                <option>Aggressive</option>
+                                <option>Extreme</option>
+                              </select>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Take Profit %</label>
+                              <input 
+                                type="number" 
+                                defaultValue={8} 
+                                min={1} 
+                                max={100} 
+                                step={0.1}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Take profit percentage"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Stop Loss %</label>
+                              <input 
+                                type="number" 
+                                defaultValue={3} 
+                                min={0.1} 
+                                max={20} 
+                                step={0.1}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Stop loss percentage"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Signal Threshold</label>
+                              <input 
+                                type="number" 
+                                defaultValue={0.7} 
+                                min={0.1} 
+                                max={1} 
+                                step={0.05}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Minimum signal confidence"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="text-xs text-trading-bronze block mb-1">Trading Timeframes</label>
+                            <div className="flex flex-wrap gap-2">
+                              <label className="flex items-center text-xs">
+                                <input type="checkbox" className="mr-1" />
+                                <span className="text-trading-bronze">1m</span>
+                              </label>
+                              <label className="flex items-center text-xs">
+                                <input type="checkbox" defaultChecked className="mr-1" />
+                                <span className="text-trading-bronze">5m</span>
+                              </label>
+                              <label className="flex items-center text-xs">
+                                <input type="checkbox" defaultChecked className="mr-1" />
+                                <span className="text-trading-bronze">15m</span>
+                              </label>
+                              <label className="flex items-center text-xs">
+                                <input type="checkbox" defaultChecked className="mr-1" />
+                                <span className="text-trading-bronze">1h</span>
+                              </label>
+                              <label className="flex items-center text-xs">
+                                <input type="checkbox" className="mr-1" />
+                                <span className="text-trading-bronze">4h</span>
+                              </label>
+                              <label className="flex items-center text-xs">
+                                <input type="checkbox" className="mr-1" />
+                                <span className="text-trading-bronze">1d</span>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {agentKey === 'risk_agent' && (
+                        <div className="space-y-3 pt-3 border-t border-trading-gray-300">
+                          <h4 className="text-sm font-semibold text-trading-gold">🛡️ Risk Management</h4>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Max Position Size (%)</label>
+                              <input 
+                                type="number" 
+                                defaultValue={5} 
+                                min={1} 
+                                max={25} 
+                                step={0.5}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Maximum position size as % of portfolio"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Daily Loss Limit (%)</label>
+                              <input 
+                                type="number" 
+                                defaultValue={2} 
+                                min={0.5} 
+                                max={10} 
+                                step={0.1}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Maximum daily loss percentage"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Max Positions</label>
+                              <input 
+                                type="number" 
+                                defaultValue={5} 
+                                min={1} 
+                                max={20}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Maximum concurrent positions"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Risk Score Max</label>
+                              <input 
+                                type="number" 
+                                defaultValue={7} 
+                                min={1} 
+                                max={10}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Maximum acceptable risk score"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Correlation Limit</label>
+                              <input 
+                                type="number" 
+                                defaultValue={0.7} 
+                                min={0.1} 
+                                max={1} 
+                                step={0.05}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Maximum asset correlation"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-2">
+                            <label className="flex items-center text-xs">
+                              <input type="checkbox" defaultChecked className="mr-1" />
+                              <span className="text-trading-bronze">Auto Stop Loss</span>
+                            </label>
+                            <label className="flex items-center text-xs">
+                              <input type="checkbox" defaultChecked className="mr-1" />
+                              <span className="text-trading-bronze">Portfolio Rebalancing</span>
+                            </label>
+                            <label className="flex items-center text-xs">
+                              <input type="checkbox" className="mr-1" />
+                              <span className="text-trading-bronze">Emergency Exit</span>
+                            </label>
+                            <label className="flex items-center text-xs">
+                              <input type="checkbox" defaultChecked className="mr-1" />
+                              <span className="text-trading-bronze">Drawdown Protection</span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {agentKey === 'memory_agent' && (
+                        <div className="space-y-3 pt-3 border-t border-trading-gray-300">
+                          <h4 className="text-sm font-semibold text-trading-gold">🧠 Memory & Learning</h4>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Learning Rate</label>
+                              <select 
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Speed of pattern learning"
+                              >
+                                <option>Fast</option>
+                                <option>Normal</option>
+                                <option>Slow</option>
+                                <option>Conservative</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Memory Retention (days)</label>
+                              <input 
+                                type="number" 
+                                defaultValue={30} 
+                                min={7} 
+                                max={365}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="How long to keep learned patterns"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Pattern Threshold</label>
+                              <input 
+                                type="number" 
+                                defaultValue={0.8} 
+                                min={0.1} 
+                                max={1} 
+                                step={0.05}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Minimum pattern confidence"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Max Patterns</label>
+                              <input 
+                                type="number" 
+                                defaultValue={10000} 
+                                min={1000} 
+                                max={100000} 
+                                step={1000}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Maximum stored patterns"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-trading-bronze block mb-1">Similarity Score</label>
+                              <input 
+                                type="number" 
+                                defaultValue={0.75} 
+                                min={0.1} 
+                                max={1} 
+                                step={0.05}
+                                className="w-full px-2 py-1 text-xs bg-trading-gray-400 border border-trading-gray-300 rounded"
+                                title="Pattern similarity threshold"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-2">
+                            <label className="flex items-center text-xs">
+                              <input type="checkbox" defaultChecked className="mr-1" />
+                              <span className="text-trading-bronze">Pattern Recognition</span>
+                            </label>
+                            <label className="flex items-center text-xs">
+                              <input type="checkbox" defaultChecked className="mr-1" />
+                              <span className="text-trading-bronze">Market Memory</span>
+                            </label>
+                            <label className="flex items-center text-xs">
+                              <input type="checkbox" className="mr-1" />
+                              <span className="text-trading-bronze">Adaptive Learning</span>
+                            </label>
+                            <label className="flex items-center text-xs">
+                              <input type="checkbox" defaultChecked className="mr-1" />
+                              <span className="text-trading-bronze">Historical Analysis</span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={() => controlAgent(agentKey, 'start')}
+                          className="flex-1 px-3 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded"
+                        >
+                          START
+                        </button>
+                        <button 
+                          onClick={() => controlAgent(agentKey, 'stop')}
+                          className="flex-1 px-3 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded"
+                        >
+                          STOP
+                        </button>
+                        <button 
+                          onClick={() => controlAgent(agentKey, 'restart')}
+                          className={`flex-1 px-3 py-1 text-xs bg-${agentConfig.color}-600 hover:bg-${agentConfig.color}-500 text-white rounded`}
+                        >
+                          RESTART
+                        </button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -606,24 +1321,103 @@ const Dashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4">
-            <button className="px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium">
+            <button 
+              onClick={() => controlAgent('all', 'start')}
+              className="px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium"
+            >
               START ALL AGENTS
             </button>
-            <button className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium">
+            <button 
+              onClick={() => controlAgent('all', 'stop')}
+              className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium"
+            >
               STOP ALL AGENTS
             </button>
-            <button className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium">
+            <button 
+              onClick={() => controlAgent('all', 'restart')}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium"
+            >
               RESTART ALL AGENTS
             </button>
-            <button className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium">
+            <button 
+              onClick={() => controlAgent('all', 'emergency_stop')}
+              className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium"
+            >
               EMERGENCY STOP
             </button>
-            <button className="px-6 py-2 bg-trading-gold hover:bg-trading-gold/80 text-black rounded-lg font-medium">
+            <button 
+              onClick={async () => {
+                try {
+                  const response = await fetch(`${API_BASE}/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings),
+                  });
+                  if (response.ok) {
+                    logger.info('Configuration saved successfully');
+                  }
+                } catch (err) {
+                  logger.error('Failed to save configuration:', err);
+                }
+              }}
+              className="px-6 py-2 bg-trading-gold hover:bg-trading-gold/80 text-black rounded-lg font-medium"
+            >
               SAVE CONFIGURATION
             </button>
           </div>
+          
+          {/* System Status Display */}
+          {agentStatus?.system_status && (
+            <div className="mt-6 p-4 bg-trading-gray-400/20 rounded-lg">
+              <h4 className="text-sm font-medium text-trading-gold mb-3">System Status</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                <div>
+                  <span className="text-trading-bronze">CPU Usage:</span>
+                  <span className="ml-2 text-trading-gold">{agentStatus.system_status.cpu_usage}%</span>
+                </div>
+                <div>
+                  <span className="text-trading-bronze">Memory:</span>
+                  <span className="ml-2 text-trading-gold">{agentStatus.system_status.memory}</span>
+                </div>
+                <div>
+                  <span className="text-trading-bronze">Connections:</span>
+                  <span className="ml-2 text-trading-gold">{agentStatus.system_status.connections}</span>
+                </div>
+                <div>
+                  <span className="text-trading-bronze">Uptime:</span>
+                  <span className="ml-2 text-trading-gold">{agentStatus.system_status.uptime}</span>
+                </div>
+              </div>
+              
+              {agentStatus.performance && (
+                <div className="mt-4 pt-4 border-t border-trading-gray-300/20">
+                  <h5 className="text-xs font-medium text-trading-gold mb-2">Performance Metrics</h5>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div>
+                      <span className="text-trading-bronze">Signals/Hour:</span>
+                      <span className="ml-2 text-green-400">{agentStatus.performance.signals_per_hour}</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Accuracy:</span>
+                      <span className="ml-2 text-green-400">{agentStatus.performance.accuracy}%</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Latency:</span>
+                      <span className="ml-2 text-yellow-400">{agentStatus.performance.latency}ms</span>
+                    </div>
+                    <div>
+                      <span className="text-trading-bronze">Queue:</span>
+                      <span className="ml-2 text-blue-400">{agentStatus.performance.queue}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   );
 
@@ -684,8 +1478,8 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-hidden">
-          <TabsContent value="trading" className="h-full m-0">
+        <div className="flex-1 overflow-y-auto">
+          <TabsContent value="trading" className="h-full m-0 overflow-y-auto">
             {renderTradingTab()}
           </TabsContent>
           
@@ -694,7 +1488,19 @@ const Dashboard: React.FC = () => {
           </TabsContent>
           
           <TabsContent value="source" className="h-full m-0">
-            <SourceEditor apiBaseUrl="http://localhost:8000" />
+            {isClient ? (
+              <Suspense fallback={
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-gray-400">Loading Monaco Editor...</div>
+                </div>
+              }>
+                <MonacoEditor theme="vs-dark" />
+              </Suspense>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-gray-400">Initializing Editor...</div>
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="agents" className="h-full m-0">

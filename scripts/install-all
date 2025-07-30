@@ -217,14 +217,28 @@ print_header "Setting up Desktop Integration..."
 
 CURRENT_DIR=$(pwd)
 
-# Update desktop file with correct paths
-if [ -f "GremlinTrader.desktop" ]; then
-    sed -i "s|/home/runner/work/Gremlin-ShadTail-Trader/Gremlin-ShadTail-Trader|$CURRENT_DIR|g" GremlinTrader.desktop
-    sed -i "s|/home/statiksmoke8/Gremlin-ShadTail-Trader|$CURRENT_DIR|g" GremlinTrader.desktop
-fi
+# Create desktop file
+print_status "Creating desktop application entry..."
+cat > GremlinTrader.desktop << EOF
+[Desktop Entry]
+Name=Gremlin ShadTail Trader
+Comment=Professional AI Trading System
+GenericName=Trading Platform
+Exec=$HOME/Gremlin-ShadTail-Trader/scripts/launch-gremlin-trader.sh
+Icon=$HOME/Gremlin-ShadTail-Trader/resources/icon.png
+Type=Application
+Categories=Office;Finance;Development;
+StartupNotify=true
+Terminal=false
+StartupWMClass=gremlin-shadtail-trader
+Keywords=trading;finance;ai;crypto;stocks;
+MimeType=application/x-trading-config;
+EOF
+
+print_success "Desktop file created"
 
 # Make launch script executable
-chmod +x launch-gremlin-trader.sh
+chmod +x scripts/launch-gremlin-trader.sh
 
 # Create desktop shortcut
 DESKTOP_DIR="$HOME/Desktop"

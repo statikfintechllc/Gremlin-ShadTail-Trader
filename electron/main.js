@@ -132,15 +132,69 @@ function startBackend() {
     // Development mode - use poetry
     backendPath = path.join(__dirname, '../backend');
     command = 'poetry';
-    args = ['run', 'uvicorn', 'dashboard_backend.server:app', '--host', '0.0.0.0', '--port', '8000'];
+    args = ['run', 'uvicorn', 'server:app', '--host', '0.0.0.0', '--port', '8000'];
   } else {
-    // Production mode - use poetry from the packaged backend directory
-    backendPath = path.join(process.resourcesPath, 'backend');
-    command = 'poetry';
-    args = ['run', 'uvicorn', 'dashboard_backend.server:app', '--host', '0.0.0.0', '--port', '8000'];
+    // Production mode - check multiple possible locations for backend
+    const possibleBackendPaths = [
+      path.join(process.resourcesPath, 'backend'),
+      path.join(__dirname, '../backend'),
+      path.join(__dirname, '../resources/backend'),
+      path.join(process.cwd(), 'backend')
+    ];
     
-    // Set PYTHONPATH to include the backend directory
-    process.env.PYTHONPATH = backendPath + ':' + (process.env.PYTHONPATH || '');
+    backendPath = possibleBackendPaths.find(p => fs.existsSync(p));
+    
+    if (!backendPath) {
+      console.error('Backend not found in any expected location:', possibleBackendPaths);
+      return;
+    }
+    
+    console.log('Using backend path:', backendPath);
+    
+    // Check if Poetry is available first, fallback to direct Python
+    let usePoetry = false;
+    try {
+      require('child_process').execSync('poetry --version', { stdio: 'ignore' });
+      usePoetry = true;
+      console.log('Poetry available, using Poetry mode');
+    } catch {
+      console.log('Poetry not available, using direct Python mode');
+    }
+    
+    if (usePoetry) {
+      // Use Poetry if available (better for development/local builds)
+      command = 'poetry';
+      args = ['run', 'uvicorn', 'server:app', '--host', '0.0.0.0', '--port', '8000'];
+    } else {
+      // Direct Python mode for true production builds
+      const pythonExecutables = [
+        'python3',
+        'python',
+        '/usr/bin/python3',
+        '/usr/bin/python'
+      ];
+      
+      command = pythonExecutables.find(p => {
+        try {
+          require('child_process').execSync(`which ${p}`, { stdio: 'ignore' });
+          return true;
+        } catch {
+          return false;
+        }
+      }) || 'python3';
+      
+      args = ['-m', 'uvicorn', 'server:app', '--host', '0.0.0.0', '--port', '8000'];
+      
+      // Set comprehensive PYTHONPATH for production
+      const pythonPaths = [
+        backendPath,
+        path.join(backendPath, 'Gremlin_Trade_Core'),
+        path.join(backendPath, 'Gremlin_Trade_Memory'),
+        process.env.PYTHONPATH || ''
+      ].filter(Boolean);
+      
+      process.env.PYTHONPATH = pythonPaths.join(':');
+    }
   }
 
   console.log(`Backend path: ${backendPath}`);
@@ -369,6 +423,98 @@ app.on('before-quit', () => {
 ipcMain.handle('get-app-version', () => {
   return app.getVersion();
 });
+
+// File system access for Monaco editor
+ipcMain.handle('get-project-files', async () => {
+  try {
+    const projectRoot = path.join(__dirname, '..');
+    const files = await getDirectoryTree(projectRoot);
+    return { success: true, files };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('read-file', async (event, filePath) => {
+  try {
+    const projectRoot = path.join(__dirname, '..');
+    const fullPath = path.resolve(projectRoot, filePath);
+    
+    // Security check - ensure file is within project
+    if (!fullPath.startsWith(projectRoot)) {
+      throw new Error('Access denied: File outside project directory');
+    }
+    
+    const content = fs.readFileSync(fullPath, 'utf8');
+    return { success: true, content };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('write-file', async (event, filePath, content) => {
+  try {
+    const projectRoot = path.join(__dirname, '..');
+    const fullPath = path.resolve(projectRoot, filePath);
+    
+    // Security check - ensure file is within project
+    if (!fullPath.startsWith(projectRoot)) {
+      throw new Error('Access denied: File outside project directory');
+    }
+    
+    // Ensure directory exists
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    fs.writeFileSync(fullPath, content, 'utf8');
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+async function getDirectoryTree(dirPath, basePath = '') {
+  const items = [];
+  const files = fs.readdirSync(dirPath);
+  
+  for (const file of files) {
+    // Skip hidden files and node_modules
+    if (file.startsWith('.') || file === 'node_modules' || file === '__pycache__') {
+      continue;
+    }
+    
+    const fullPath = path.join(dirPath, file);
+    const relativePath = path.join(basePath, file);
+    const stats = fs.statSync(fullPath);
+    
+    if (stats.isDirectory()) {
+      const children = await getDirectoryTree(fullPath, relativePath);
+      items.push({
+        name: file,
+        path: relativePath,
+        type: 'directory',
+        children: children
+      });
+    } else {
+      items.push({
+        name: file,
+        path: relativePath,
+        type: 'file',
+        size: stats.size,
+        modified: stats.mtime.toISOString()
+      });
+    }
+  }
+  
+  return items.sort((a, b) => {
+    // Directories first, then files
+    if (a.type === 'directory' && b.type === 'file') return -1;
+    if (a.type === 'file' && b.type === 'directory') return 1;
+    return a.name.localeCompare(b.name);
+  });
+}
 
 ipcMain.handle('restart-backend', () => {
   stopProcesses();

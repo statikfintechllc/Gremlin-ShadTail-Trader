@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Gremlin ShadTail Trader Launcher - NO CONSTRAINTS MODE
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."  # Go to project root directory
 
 echo "🚀 Starting Gremlin ShadTail Trader..."
 
@@ -32,12 +32,16 @@ if [ -f "dist-electron/linux-unpacked/gremlin-shadtail-trader" ]; then
         --disable-web-security \
         --allow-running-insecure-content \
         --disable-features=VizDisplayCompositor &
-elif [ -f "dist-electron"/*.AppImage ]; then
+elif [ -f "dist-electron/Gremlin ShadTail Trader-1.0.0.AppImage" ]; then
     echo "📱 Launching AppImage..."
-    chmod +x ./dist-electron/*.AppImage
-    ./dist-electron/*.AppImage \
+    chmod +x "dist-electron/Gremlin ShadTail Trader-1.0.0.AppImage"
+    "dist-electron/Gremlin ShadTail Trader-1.0.0.AppImage" \
         --no-sandbox \
         --disable-dev-shm-usage \
+        --disable-gpu \
+        --disable-web-security \
+        --allow-running-insecure-content \
+        --disable-features=VizDisplayCompositor & \
         --disable-gpu \
         --disable-web-security \
         --allow-running-insecure-content \

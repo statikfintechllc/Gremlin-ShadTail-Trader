@@ -383,7 +383,7 @@ def get_live_penny_stocks() -> List[Dict[str, Any]]:
     try:
         # Import here to avoid circular imports
         import asyncio
-        from dashboard_backend.Gremlin_Trade_Core.simple_market_service import get_live_penny_stocks_real
+        from Gremlin_Trade_Core.simple_market_service import get_live_penny_stocks_real
         
         # Get real data asynchronously
         loop = asyncio.new_event_loop()

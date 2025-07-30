@@ -25,7 +25,7 @@ import uuid
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from dashboard_backend.Gremlin_Trade_Core.globals import (
+from Gremlin_Trade_Core.globals import (
     CFG, MEM, logger, setup_module_logger, resolve_path, DATA_DIR,
     METADATA_DB_PATH, CHROMA_DIR, CHROMA_DB_PATH, VECTOR_STORE_DIR
 )
