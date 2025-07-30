@@ -215,11 +215,19 @@ npm run package:linux 2>/dev/null || print_warning "Desktop packaging optional -
 # Setup desktop integration
 print_header "Setting up Desktop Integration..."
 
-CURRENT_DIR=$(pwd)
-
 # Create desktop file
 print_status "Creating desktop application entry..."
-cat > GremlinTrader.desktop << EOF
+
+# Make launch script executable
+chmod +x scripts/launch-gremlin-trader.sh
+
+# Create desktop shortcut
+DESKTOP_DIR="$HOME/Desktop"
+APPLICATIONS_DIR="$HOME/.local/share/applications"
+mkdir -p "$APPLICATIONS_DIR"
+
+# Create desktop file directly in applications directory
+cat > "$APPLICATIONS_DIR/GremlinTrader.desktop" << EOF
 [Desktop Entry]
 Name=Gremlin ShadTail Trader
 Comment=Professional AI Trading System
@@ -235,30 +243,20 @@ Keywords=trading;finance;ai;crypto;stocks;
 MimeType=application/x-trading-config;
 EOF
 
+chmod +x "$APPLICATIONS_DIR/GremlinTrader.desktop"
+
+# Also create on desktop if directory exists
+if [ -d "$DESKTOP_DIR" ]; then
+    cp "$APPLICATIONS_DIR/GremlinTrader.desktop" "$DESKTOP_DIR/"
+    chmod +x "$DESKTOP_DIR/GremlinTrader.desktop"
+    print_success "Desktop shortcut created"
+fi
+
 print_success "Desktop file created"
 
-# Make launch script executable
-chmod +x scripts/launch-gremlin-trader.sh
-
-# Create desktop shortcut
-DESKTOP_DIR="$HOME/Desktop"
-APPLICATIONS_DIR="$HOME/.local/share/applications"
-mkdir -p "$APPLICATIONS_DIR"
-
-if [ -f "GremlinTrader.desktop" ]; then
-    if [ -d "$DESKTOP_DIR" ]; then
-        cp GremlinTrader.desktop "$DESKTOP_DIR/"
-        chmod +x "$DESKTOP_DIR/GremlinTrader.desktop"
-        print_success "Desktop shortcut created"
-    fi
-    
-    cp GremlinTrader.desktop "$APPLICATIONS_DIR/"
-    chmod +x "$APPLICATIONS_DIR/GremlinTrader.desktop"
-    
-    # Update desktop database
-    if command -v update-desktop-database &> /dev/null; then
-        update-desktop-database "$APPLICATIONS_DIR" 2>/dev/null || true
-    fi
+# Update desktop database
+if command -v update-desktop-database &> /dev/null; then
+    update-desktop-database "$APPLICATIONS_DIR" 2>/dev/null || true
 fi
 
 # Update icon cache
