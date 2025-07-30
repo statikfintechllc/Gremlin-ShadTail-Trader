@@ -5,7 +5,9 @@ import tailwind from '@astrojs/tailwind';
 export default defineConfig({
   integrations: [
     react(),
-    tailwind()
+    tailwind({
+      applyBaseStyles: false, // Prevent conflicts with globals.css
+    })
   ],
   base: './', // Use relative paths for Electron
   build: {
@@ -24,7 +26,13 @@ export default defineConfig({
           chunkFileNames: '_astro/[name]-[hash].js',
           entryFileNames: '_astro/[name]-[hash].js'
         }
-      }
+      },
+      chunkSizeWarningLimit: 1000
+    },
+    css: {
+      postcss: {
+        plugins: [],
+      },
     }
   }
 });

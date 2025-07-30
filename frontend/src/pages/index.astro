@@ -49,7 +49,9 @@ import Dashboard from '../components/Dashboard.tsx';
         color: hsl(var(--foreground));
         margin: 0;
         padding: 0;
-        overflow: hidden;
+        overflow: auto;
+        height: 100vh;
+        min-height: 100vh;
       }
       
       /* Custom scrollbar for dark theme */
@@ -71,7 +73,9 @@ import Dashboard from '../components/Dashboard.tsx';
       }
     </style>
   </head>
-  <body class="bg-background text-foreground min-h-screen antialiased dark">
-    <Dashboard client:load />
+  <body class="bg-background text-foreground min-h-screen overflow-auto antialiased dark">
+    <div id="root" class="h-full min-h-screen overflow-auto">
+      <Dashboard client:load />
+    </div>
   </body>
 </html>

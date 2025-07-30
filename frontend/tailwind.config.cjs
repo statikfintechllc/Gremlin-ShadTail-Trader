@@ -1,11 +1,33 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: ["class"],
   content: [
     "./src/**/*.{astro,js,ts,jsx,tsx}",
     "./node_modules/shadcn-ui/dist/**/*.{js,ts,jsx,tsx}"
   ],
   theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
     extend: {
+      height: {
+        'screen-safe': 'calc(100vh - 2rem)',
+        'viewport': '100vh',
+        'full-scrollable': '100%',
+      },
+      maxHeight: {
+        'screen-safe': 'calc(100vh - 2rem)',
+        'viewport': '100vh',
+        'full': '100%',
+      },
+      minHeight: {
+        'screen': '100vh',
+        'full': '100%',
+      },
       colors: {
         // Professional Trading Theme: Black/Gray/Red-Gold-Bronze
         border: "hsl(var(--border))",

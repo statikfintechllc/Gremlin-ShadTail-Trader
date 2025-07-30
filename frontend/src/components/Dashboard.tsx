@@ -1420,9 +1420,9 @@ const Dashboard: React.FC = () => {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-trading-black text-trading-gold">
+    <div className="h-full min-h-screen flex flex-col bg-trading-black text-trading-gold overflow-auto">
       {/* Header */}
-      <header className="border-b border-trading-gray-300 bg-trading-gray-100/50 backdrop-blur-sm">
+      <header className="border-b border-trading-gray-300 bg-trading-gray-100/50 backdrop-blur-sm shrink-0">
         <div className="flex items-center justify-between p-6">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-trading-gold via-trading-red to-trading-bronze bg-clip-text text-transparent">
             Gremlin ShadTail Trader
@@ -1434,8 +1434,8 @@ const Dashboard: React.FC = () => {
       </header>
 
       {/* Tab Navigation */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="flex-1 flex flex-col">
-        <div className="border-b border-trading-gray-300 bg-trading-gray-200/30">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabType)} className="flex-1 flex flex-col min-h-0">
+        <div className="border-b border-trading-gray-300 bg-trading-gray-200/30 shrink-0">
           <TabsList className="grid w-full grid-cols-5 bg-transparent p-1">
             <TabsTrigger 
               value="trading" 
@@ -1476,24 +1476,24 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto">
-          <TabsContent value="trading" className="h-full m-0 overflow-y-auto">
+        <div className="flex-1 overflow-auto min-h-0">
+          <TabsContent value="trading" className="h-full m-0 overflow-auto">
             {renderTradingTab()}
           </TabsContent>
           
-          <TabsContent value="chat" className="h-full m-0">
+          <TabsContent value="chat" className="h-full m-0 overflow-auto">
             <GrokChat apiBaseUrl="http://localhost:8000" />
           </TabsContent>
           
-          <TabsContent value="source" className="h-full m-0">
+          <TabsContent value="source" className="h-full m-0 overflow-auto">
             <SourceEditor />
           </TabsContent>
           
-          <TabsContent value="agents" className="h-full m-0">
+          <TabsContent value="agents" className="h-full m-0 overflow-auto">
             {renderAgentsTab()}
           </TabsContent>
           
-          <TabsContent value="settings" className="h-full m-0">
+          <TabsContent value="settings" className="h-full m-0 overflow-auto">
             <SettingsComponent 
               settings={settings} 
               onUpdateSettings={updateSettings} 

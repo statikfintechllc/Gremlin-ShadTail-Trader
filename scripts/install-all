@@ -193,11 +193,11 @@ elif [ ! -f "resources/icon.png" ]; then
     echo "placeholder" > resources/icon.png
 fi
 
+print_status "Building backend with Poetry dependencies..."
+npm run build:backend
+
 print_status "Building frontend with theme integration..."
 npm run build:frontend
-
-print_status "Building backend components..."
-npm run build:backend
 
 print_status "Building complete application..."
 npm run build
@@ -210,7 +210,7 @@ else
 fi
 
 print_status "Packaging desktop application..."
-npm run package:linux 2>/dev/null || print_warning "Desktop packaging optional - development version ready"
+npm run package:linux
 
 # Setup desktop integration
 print_header "Setting up Desktop Integration..."
