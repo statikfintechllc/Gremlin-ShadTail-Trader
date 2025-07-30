@@ -12,7 +12,7 @@
     "dev:electron": "wait-on http://localhost:4321 && cross-env NODE_ENV=development electron .",
     "build": "npm run build:frontend",
     "build:frontend": "cd frontend && npm run build",
-    "build:backend": "cd backend && mkdir -p dist && cp -r Gremlin_Trade_Core Gremlin_Trade_Memory main.py server_enhanced.py pyproject.toml poetry.lock dist/ && echo 'Backend built to backend/dist/'",
+    "build:backend": "cd backend && mkdir -p dist && cp -r Gremlin_Trade_Core Gremlin_Trade_Memory main.py server.py pyproject.toml poetry.lock dist/ && echo 'Backend built to backend/dist/'",
     "start": "npm run build && node scripts/bootstrap.js",
     "start:safe": "npm run build && electron . --no-sandbox --disable-dev-shm-usage --disable-gpu",
     "start:display": "npm run build && DISPLAY=:0 electron . --no-sandbox --disable-dev-shm-usage",
