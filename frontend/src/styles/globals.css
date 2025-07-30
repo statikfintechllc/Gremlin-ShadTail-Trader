@@ -55,20 +55,6 @@
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
-    /* Ensure black background always */
-    background-color: #000000;
-    color: #fbbf24;
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-    /* Ensure proper scrolling */
-    overflow-x: hidden;
-    overflow-y: auto;
-    height: 100vh;
-    margin: 0;
-    padding: 0;
-  }
-  
   html {
     /* Ensure scrolling works properly */
     overflow-x: hidden;
@@ -77,11 +63,27 @@
     scroll-behavior: smooth;
   }
   
+  body {
+    @apply bg-background text-foreground;
+    /* Ensure black background always */
+    background-color: #000000;
+    color: #fbbf24;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    /* Fix scrolling issues */
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+  }
+  
   #root {
     /* Ensure app container allows scrolling */
     min-height: 100vh;
     overflow-x: hidden;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
   }
 }
 

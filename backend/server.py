@@ -18,6 +18,7 @@ from Gremlin_Trade_Core.globals import (
     CFG, MEM, logger, setup_module_logger,
     get_live_penny_stocks, recursive_scan, BASE_DIR
 )
+from Gremlin_Trade_Core.config.Agent_in import coordinator, run_scan, get_status, flush_all
 from Gremlin_Trade_Core.plugins import plugin_manager
 from Gremlin_Trade_Core.plugins.grok import GrokPlugin
 from Gremlin_Trade_Core.Gremlin_Trader_Tools.Agents_out import AgentOutputHandler
@@ -76,15 +77,15 @@ async def health_check():
 
 @app.get("/api/feed")
 async def get_feed():
-    """Get trading feed data with recursive scanning"""
+    """Get trading feed data with integrated strategy system"""
     try:
         server_logger.info("Feed data requested")
         
-        # Import signal generator
-        from Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.signal_generator import generate_signals
+        # Use the new strategy manager for comprehensive scanning
+        from Gremlin_Trade_Core.Gremlin_Trader_Strategies import run_all_strategies
         
-        # Generate signals using the enhanced system
-        signals = generate_signals(limit=20, embed=True)
+        # Run all strategies to generate signals
+        signals = await run_all_strategies(limit=20)
         
         # Format for frontend
         feed_data = []
@@ -96,34 +97,38 @@ async def get_feed():
                 "volume": signal.get("volume", 0),
                 "signal_types": signal.get("signal", []),
                 "confidence": signal.get("confidence", 0),
-                "risk_score": signal.get("risk_score", 0),
-                "strategy_score": signal.get("strategy_score", 0),
+                "final_strategy_score": signal.get("final_strategy_score", 0),
+                "strategy_sources": signal.get("strategy_sources", []),
+                "penny_score": signal.get("penny_score", 0),
+                "momentum_type": signal.get("momentum_type", "unknown"),
                 "pattern_type": signal.get("pattern_type", "unknown"),
                 "timeframe": signal.get("timeframe", "1min"),
-                "timestamp": signal.get("timestamp")
+                "timestamp": signal.get("timestamp"),
+                "spoof_risk_score": signal.get("spoof_risk_score", 0),
+                "rotation": signal.get("rotation", 0)
             }
             feed_data.append(feed_item)
         
-        server_logger.info(f"Returning {len(feed_data)} signals")
+        server_logger.info(f"Returning {len(feed_data)} strategy-enhanced signals")
         return feed_data
         
     except Exception as e:
         server_logger.error(f"Error getting feed data: {e}")
-        # Fallback to dummy data
-        return [{"symbol":"GPRO","price":2.15,"up_pct":112.0,"error": "Signal generation failed"}]
+        # Fallback to basic data
+        return [{"symbol":"GPRO","price":2.15,"up_pct":112.0,"error": "Strategy system failed"}]
 
 @app.post("/api/scan")
 async def run_scan(request: ScanRequest):
-    """Run a custom scan with specified parameters"""
+    """Run a custom scan with integrated strategy system"""
     try:
         server_logger.info(f"Custom scan requested: {request}")
         
         symbols = request.symbols or ["GPRO", "IXHL", "SAVA", "BBIG", "PROG"]
-        timeframes = request.timeframes or ["1min", "5min", "15min"]
         
         if request.recursive:
-            # Run recursive scan
-            results = recursive_scan(symbols, timeframes)
+            # Use the integrated strategy system
+            from Gremlin_Trade_Core.Gremlin_Trader_Strategies import run_all_strategies
+            results = await run_all_strategies(symbols, limit=50)
         else:
             # Run simple scan
             from Gremlin_Trade_Core.globals import run_scanner

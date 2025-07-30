@@ -25,30 +25,6 @@ Gremlin ShadTail Trader combines modern web technologies with powerful backend p
 
 ![Gremlin ShadTail Trader - Settings](https://github.com/user-attachments/assets/8f4603e6-fc5d-407e-adec-d1537b124d0c)
 
-## 🏗️ Architecture
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│                 │    │                  │    │                 │
-│   Electron      │◄──►│   Frontend       │◄──►│   Backend       │
-│   (Desktop App) │    │   (Astro/React)  │    │   (FastAPI)     │
-│                 │    │                  │    │                 │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                        │                        │
-         │                        │                        │
-    ┌────▼────┐              ┌────▼────┐              ┌────▼────┐
-    │  Main   │              │  Plugin │              │  API    │
-    │ Process │              │ System  │              │ Routes  │
-    └─────────┘              └─────────┘              └─────────┘
-                                  │
-                        ┌─────────▼─────────┐
-                        │                   │
-                   ┌────▼────┐         ┌────▼────┐
-                   │  Grok   │         │ Source  │
-                   │ Plugin  │         │ Editor  │
-                   └─────────┘         └─────────┘
-```
-
 ### Technology Stack
 
 - **Frontend**: Astro 4.0, React 18, Tailwind CSS 3.4, Monaco Editor
@@ -58,52 +34,6 @@ Gremlin ShadTail Trader combines modern web technologies with powerful backend p
 - **Build Tools**: Vite, PostCSS, Autoprefixer
 - **Package Management**: npm (frontend), Poetry (backend)
 - **Development**: Hot reload, TypeScript support
-
-## 📁 Directory Structure
-
-```
-gremlin-shadtail-trader/
-├── backend/                          # FastAPI backend application
-│   ├── Gremlin_Trade_Core/          # Core trading logic
-│   │   ├── config/                  # Configuration files
-│   │   │   ├── FullSpec.config      # 🆕 Comprehensive config (API keys, logins)
-│   │   │   ├── Gremlin_Trade_Config/
-│   │   │   │   ├── memory.json      # Memory system config
-│   │   │   │   ├── trade_agents.config
-│   │   │   │   └── trade_strategy.config
-│   │   │   └── Gremlin_Trade_Logs/  # System logs
-│   │   ├── plugins/                 # 🆕 Plugin system
-│   │   │   ├── __init__.py         # Plugin manager
-│   │   │   └── grok/               # 🆕 Grok AI plugin
-│   │   │       └── __init__.py     # Grok chat implementation
-│   │   ├── Gremlin_Trader_Tools/   # Trading agent tools
-│   │   └── globals.py              # Global configuration & utilities
-│   ├── Gremlin_Trade_Memory/       # Vector memory system
-│   ├── server.py                   # Main FastAPI application
-│   └── pyproject.toml              # Python dependencies
-├── frontend/                        # Astro frontend application
-│   ├── src/
-│   │   ├── components/             # React components
-│   │   │   ├── Dashboard.tsx       # 🆕 Enhanced tabbed dashboard
-│   │   │   ├── GrokChat.tsx        # 🆕 Grok AI chat interface
-│   │   │   └── SourceEditor.tsx    # 🆕 Monaco source code editor
-│   │   ├── pages/                  # Astro pages
-│   │   │   └── index.astro         # Landing page
-│   │   └── utils/                  # Utility functions
-│   │       └── logger.ts           # Frontend logging system
-│   ├── astro.config.mjs           # Astro configuration
-│   ├── tailwind.config.cjs        # Tailwind CSS configuration
-│   └── package.json               # Frontend dependencies
-├── electron/                       # Electron main process
-│   ├── main.js                    # Main Electron process
-│   └── preload.js                 # Preload script for IPC
-├── scripts/                       # Build and utility scripts
-│   └── install-all               # Legacy dependency installation script
-├── install.sh                    # 🆕 Enhanced installation script
-├── launch-gremlin-trader.sh       # 🆕 Application launcher
-├── package.json                   # Root package.json (monorepo)
-└── README.md                      # This file
-```
 
 ## 🛠️ Setup Instructions
 

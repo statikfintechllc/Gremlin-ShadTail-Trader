@@ -2,8 +2,6 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { logger } from '../utils/logger';
 import GrokChat from './GrokChat';
 import SourceEditor from './SourceEditor';
-// Monaco Editor - dynamically imported to handle SSR
-const MonacoEditor = React.lazy(() => import('./MonacoEditor'));
 import SettingsComponent from './Settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -1488,19 +1486,7 @@ const Dashboard: React.FC = () => {
           </TabsContent>
           
           <TabsContent value="source" className="h-full m-0">
-            {isClient ? (
-              <Suspense fallback={
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-gray-400">Loading Monaco Editor...</div>
-                </div>
-              }>
-                <MonacoEditor theme="vs-dark" />
-              </Suspense>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-gray-400">Initializing Editor...</div>
-              </div>
-            )}
+            <SourceEditor />
           </TabsContent>
           
           <TabsContent value="agents" className="h-full m-0">

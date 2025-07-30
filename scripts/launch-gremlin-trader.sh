@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# For Linux users: Launch Gremlin ShadTail Trader from Dashboard
+
 # Gremlin ShadTail Trader Launcher - NO CONSTRAINTS MODE
 cd "$(dirname "$0")/.."  # Go to project root directory
 
