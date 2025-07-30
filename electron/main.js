@@ -151,12 +151,19 @@ function startBackend() {
     
     console.log('Using backend path:', backendPath);
     
-    // Check if Poetry is available first, fallback to direct Python
+    // Check if Poetry virtual environment exists in packaged app, fallback to direct Python
     let usePoetry = false;
+    const poetryEnvPath = path.join(backendPath, '.venv');
+    
     try {
+      // Only use Poetry if both Poetry is installed AND virtual environment exists
       require('child_process').execSync('poetry --version', { stdio: 'ignore' });
-      usePoetry = true;
-      console.log('Poetry available, using Poetry mode');
+      if (fs.existsSync(poetryEnvPath)) {
+        usePoetry = true;
+        console.log('Poetry and virtual environment available, using Poetry mode');
+      } else {
+        console.log('Poetry available but no virtual environment found, using direct Python mode');
+      }
     } catch {
       console.log('Poetry not available, using direct Python mode');
     }
