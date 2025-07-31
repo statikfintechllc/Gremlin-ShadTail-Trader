@@ -1,70 +1,8 @@
 # Gremlin-ShadTail-Trader Structure
 
 ```text
-•
-├── .git
-│   ├── branches
-│   ├── hooks
-│   │   ├── applypatch-msg.sample
-│   │   ├── commit-msg.sample
-│   │   ├── post-update.sample
-│   │   ├── pre-applypatch.sample
-│   │   ├── pre-commit.sample
-│   │   ├── pre-merge-commit.sample
-│   │   ├── pre-push.sample
-│   │   ├── pre-rebase.sample
-│   │   ├── pre-receive.sample
-│   │   ├── prepare-commit-msg.sample
-│   │   ├── push-to-checkout.sample
-│   │   └── update.sample
-│   ├── info
-│   │   └── exclude
-│   ├── logs
-│   │   ├── refs
-│   │   │   ├── heads
-│   │   │   │   └── master
-│   │   │   └── remotes
-│   │   │       └── origin
-│   │   │           ├── HEAD
-│   │   │           └── master
-│   │   └── HEAD
-│   ├── objects
-│   │   ├── 02
-│   │   │   └── 88337422bdb29a59a8292e723823602a9efaba
-│   │   ├── 1a
-│   │   │   └── b74923e9116f1d8196cd7bb4d44fc50f2a54e1
-│   │   ├── 2c
-│   │   │   └── ee0c2d1acc4f4a66b83b0432b6d5c42f86a740
-│   │   ├── 41
-│   │   │   └── 088c9dfefedbf1c3b439e8f7092c0a58e019a0
-│   │   ├── b4
-│   │   │   └── a25247688d087d0eace88a9275d85bd5ee874a
-│   │   ├── c1
-│   │   │   └── 418dcf28c546eadc27e8584a29f4818214541c
-│   │   ├── f5
-│   │   │   └── 69ef90ccac70982d549f37b8dc022de71e0e1b
-│   │   ├── f9
-│   │   │   └── f63787cd5ee60c50b761db6458773e83f7d7c8
-│   │   ├── info
-│   │   └── pack
-│   │       ├── pack-b39c8e4d3d2d1a2e382bb342e0a3099da50d5280.idx
-│   │       └── pack-b39c8e4d3d2d1a2e382bb342e0a3099da50d5280.pack
-│   ├── refs
-│   │   ├── heads
-│   │   │   └── master
-│   │   ├── remotes
-│   │   │   └── origin
-│   │   │       ├── HEAD
-│   │   │       └── master
-│   │   └── tags
-│   ├── COMMIT_EDITMSG
-│   ├── FETCH_HEAD
-│   ├── HEAD
-│   ├── ORIG_HEAD
-│   ├── config
-│   ├── description
-│   ├── index
-│   └── packed-refs
+
+Gremlin-ShadTail-Trader
 ├── backend
 │   ├── Gremlin_Trade_Core
 │   │   ├── Gremlin_Trader_Strategies
@@ -191,5 +129,5 @@
 ├── package-lock.json
 └── package.json
 
-60 directories, 128 files
+36 directories, 86 files
 ```
