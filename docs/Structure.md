@@ -67,6 +67,9 @@ Gremlin-ShadTail-Trader
 │   ├── main.py
 │   ├── pyproject.toml
 │   └── server.py
+├── docs
+│   ├── README.md
+│   └── Structure.md
 ├── electron
 │   ├── main.js
 │   ├── main.js.backup
@@ -123,8 +126,6 @@ Gremlin-ShadTail-Trader
 │   └── prebuild.js
 ├── .gitignore
 ├── .hintrc
-├── README.md
-├── Structure.md
 ├── __init__.py
 ├── package-lock.json
 └── package.json
