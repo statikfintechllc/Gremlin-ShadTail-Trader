@@ -125,6 +125,36 @@ def dummy_encode(text):
     np.random.seed(hash_val)
     return np.random.rand(dimension).astype(np.float32)
 
+def flatten_metadata(metadata: Dict[str, Any], prefix: str = "", max_depth: int = 3) -> Dict[str, Any]:
+    """
+    Flatten nested metadata for ChromaDB compatibility.
+    ChromaDB only accepts str, int, float, bool, or None values.
+    """
+    flattened = {}
+    
+    def _flatten_recursive(obj, current_prefix, depth):
+        if depth > max_depth:
+            # Convert to string if too deep
+            flattened[current_prefix.rstrip('_')] = str(obj)
+            return
+            
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                new_key = f"{current_prefix}{key}" if current_prefix else key
+                _flatten_recursive(value, f"{new_key}_", depth + 1)
+        elif isinstance(obj, (list, tuple)):
+            # Convert arrays to string representation for ChromaDB
+            flattened[current_prefix.rstrip('_')] = str(obj)
+        elif isinstance(obj, (str, int, float, bool)) or obj is None:
+            # Direct supported types
+            flattened[current_prefix.rstrip('_')] = obj
+        else:
+            # Convert other types to string
+            flattened[current_prefix.rstrip('_')] = str(obj)
+    
+    _flatten_recursive(metadata, prefix, 0)
+    return flattened
+
 # Enhanced ChromaDB Setup with proper SQLite configuration
 _chroma_client = None
 _collection = None
@@ -175,6 +205,9 @@ def init_metadata_database():
         conn = sqlite3.connect(METADATA_DB_PATH)
         cursor = conn.cursor()
         
+        # Check if tables exist and have correct schema, migrate if needed
+        _migrate_database_schema(cursor)
+        
         # Enhanced signals table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS signals (
@@ -188,9 +221,7 @@ def init_metadata_database():
                 timeframe TEXT,
                 indicators TEXT,
                 metadata TEXT,
-                processed BOOLEAN DEFAULT FALSE,
-                INDEX(symbol, timestamp),
-                INDEX(signal_type, confidence)
+                processed BOOLEAN DEFAULT FALSE
             )
         ''')
         
@@ -209,8 +240,6 @@ def init_metadata_database():
                 signal_id TEXT,
                 metadata TEXT,
                 status TEXT DEFAULT 'pending',
-                INDEX(symbol, timestamp),
-                INDEX(status, timestamp),
                 FOREIGN KEY(signal_id) REFERENCES signals(id)
             )
         ''')
@@ -230,9 +259,7 @@ def init_metadata_database():
                 stop_loss REAL,
                 take_profit REAL,
                 status TEXT DEFAULT 'open',
-                metadata TEXT,
-                INDEX(symbol, status),
-                INDEX(timestamp)
+                metadata TEXT
             )
         ''')
         
@@ -246,9 +273,7 @@ def init_metadata_database():
                 timestamp TEXT NOT NULL,
                 timeframe TEXT DEFAULT '1min',
                 ohlcv TEXT,
-                indicators TEXT,
-                INDEX(symbol, timestamp),
-                INDEX(timeframe, timestamp)
+                indicators TEXT
             )
         ''')
         
@@ -263,8 +288,7 @@ def init_metadata_database():
                 max_drawdown REAL DEFAULT 0,
                 sharpe_ratio REAL DEFAULT 0,
                 timestamp TEXT NOT NULL,
-                metadata TEXT,
-                INDEX(strategy_name, timestamp)
+                metadata TEXT
             )
         ''')
         
@@ -295,12 +319,98 @@ def init_metadata_database():
             ON embedding_metadata(source, created_at)
         ''')
         
+        # Create indexes for signals table
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_signals_symbol_timestamp 
+            ON signals(symbol, timestamp)
+        ''')
+        
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_signals_type_confidence 
+            ON signals(signal_type, confidence)
+        ''')
+        
+        # Create indexes for trades table (only if status column exists)
+        if _column_exists(cursor, 'trades', 'status'):
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_trades_symbol_timestamp 
+                ON trades(symbol, timestamp)
+            ''')
+            
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_trades_status_timestamp 
+                ON trades(status, timestamp)
+            ''')
+        
+        # Create indexes for positions table (only if status column exists)
+        if _column_exists(cursor, 'positions', 'status'):
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_positions_symbol_status 
+                ON positions(symbol, status)
+            ''')
+            
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_positions_timestamp 
+                ON positions(timestamp)
+            ''')
+        
+        # Create indexes for market_data table
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_market_data_symbol_timestamp 
+            ON market_data(symbol, timestamp)
+        ''')
+        
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_market_data_timeframe_timestamp 
+            ON market_data(timeframe, timestamp)
+        ''')
+        
+        # Create indexes for strategy_performance table
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_strategy_performance_name_timestamp 
+            ON strategy_performance(strategy_name, timestamp)
+        ''')
+        
         conn.commit()
         conn.close()
         embedder_logger.info("Enhanced metadata database initialized")
         
     except Exception as e:
         embedder_logger.error(f"Error initializing metadata database: {e}")
+
+def _column_exists(cursor, table_name: str, column_name: str) -> bool:
+    """Check if a column exists in a table"""
+    try:
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = cursor.fetchall()
+        column_names = [col[1] for col in columns]
+        return column_name in column_names
+    except Exception:
+        return False
+
+def _migrate_database_schema(cursor):
+    """Migrate database schema to add missing columns"""
+    try:
+        # Check if trades table exists and needs status column
+        if not _column_exists(cursor, 'trades', 'status'):
+            try:
+                cursor.execute('ALTER TABLE trades ADD COLUMN status TEXT DEFAULT "pending"')
+                embedder_logger.info("Added status column to trades table")
+            except sqlite3.OperationalError as e:
+                if "duplicate column name" not in str(e):
+                    embedder_logger.warning(f"Could not add status column to trades: {e}")
+        
+        # Check if positions table exists and needs status column  
+        if not _column_exists(cursor, 'positions', 'status'):
+            try:
+                cursor.execute('ALTER TABLE positions ADD COLUMN status TEXT DEFAULT "open"')
+                embedder_logger.info("Added status column to positions table")
+            except sqlite3.OperationalError as e:
+                if "duplicate column name" not in str(e):
+                    embedder_logger.warning(f"Could not add status column to positions: {e}")
+                    
+    except Exception as e:
+        embedder_logger.warning(f"Error during schema migration: {e}")
 
 def store_embedding(embedding: Dict[str, Any]) -> Dict[str, Any]:
     """Store embedding in both ChromaDB and metadata database"""
@@ -317,10 +427,13 @@ def store_embedding(embedding: Dict[str, Any]) -> Dict[str, Any]:
         client, collection = get_chroma_client()
         if collection is not None:
             try:
+                # Flatten metadata for ChromaDB compatibility
+                flattened_meta = flatten_metadata(meta)
+                
                 collection.add(
                     documents=[text],
                     embeddings=[vector.tolist() if hasattr(vector, "tolist") else list(vector)],
-                    metadatas=[meta],
+                    metadatas=[flattened_meta],
                     ids=[emb_id]
                 )
                 embedder_logger.debug(f"Added to ChromaDB: {emb_id}")
@@ -494,9 +607,9 @@ def analyze_signal(market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         signals = []
         confidence = 0.0
         
-        # RSI signals
+        # RSI signals - add null guards
         rsi = indicators.get("rsi")
-        if rsi is not None:
+        if rsi is not None and not np.isnan(rsi):
             if rsi < 30:
                 signals.append("oversold")
                 confidence += 0.3
@@ -504,10 +617,10 @@ def analyze_signal(market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 signals.append("overbought")
                 confidence += 0.3
         
-        # MACD signals
+        # MACD signals - add null guards
         macd = indicators.get("macd")
         macd_signal = indicators.get("macd_signal")
-        if macd is not None and macd_signal is not None:
+        if macd is not None and macd_signal is not None and not np.isnan(macd) and not np.isnan(macd_signal):
             if macd > macd_signal:
                 signals.append("macd_bullish")
                 confidence += 0.25
@@ -515,10 +628,10 @@ def analyze_signal(market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 signals.append("macd_bearish")
                 confidence += 0.25
         
-        # Moving average signals
+        # Moving average signals - add null guards
         sma_5 = indicators.get("sma_5")
         sma_20 = indicators.get("sma_20")
-        if sma_5 is not None and sma_20 is not None:
+        if sma_5 is not None and sma_20 is not None and not np.isnan(sma_5) and not np.isnan(sma_20):
             if sma_5 > sma_20:
                 signals.append("ma_golden_cross")
                 confidence += 0.2
@@ -526,10 +639,10 @@ def analyze_signal(market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 signals.append("ma_death_cross")
                 confidence += 0.2
         
-        # Bollinger Bands signals
+        # Bollinger Bands signals - add null guards
         bb_upper = indicators.get("bb_upper")
         bb_lower = indicators.get("bb_lower")
-        if bb_upper is not None and bb_lower is not None:
+        if bb_upper is not None and bb_lower is not None and not np.isnan(bb_upper) and not np.isnan(bb_lower):
             if price > bb_upper:
                 signals.append("bb_overbought")
                 confidence += 0.15
@@ -641,8 +754,12 @@ def execute_trade(signal: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         price = signal["price"]
         confidence = signal["confidence"]
         
-        # Risk management
+        # Risk management - add null guards
         max_risk_per_trade = CFG.get("agents", {}).get("risk_management", {}).get("max_risk_per_trade", 0.10)
+        
+        # Ensure confidence is not None
+        if confidence is None:
+            confidence = 0.0
         
         if confidence < 0.7:  # Minimum confidence threshold
             embedder_logger.info(f"Signal confidence {confidence:.2f} below threshold for {symbol}")
@@ -651,8 +768,14 @@ def execute_trade(signal: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if signal_type == "HOLD":
             return None
         
-        # Calculate position size (simplified)
+        # Calculate position size (simplified) - add null guards
         account_balance = 10000  # Simulated account balance
+        
+        # Ensure price is not None or zero
+        if price is None or price <= 0:
+            embedder_logger.warning(f"Invalid price {price} for {symbol}")
+            return None
+            
         risk_amount = account_balance * max_risk_per_trade
         quantity = int(risk_amount / price)
         
@@ -753,6 +876,16 @@ def monitor_positions():
         conn = sqlite3.connect(METADATA_DB_PATH)
         cursor = conn.cursor()
         
+        # Check if positions table exists and has status column
+        cursor.execute("PRAGMA table_info(positions)")
+        columns = cursor.fetchall()
+        column_names = [col[1] for col in columns]
+        
+        if 'status' not in column_names:
+            embedder_logger.warning("Positions table not yet initialized with status column - skipping position monitoring")
+            conn.close()
+            return
+        
         # Get open positions
         cursor.execute('''
             SELECT id, symbol, quantity, avg_price, current_price 
@@ -765,25 +898,35 @@ def monitor_positions():
         for position in positions:
             pos_id, symbol, quantity, avg_price, current_price = position
             
+            # Add null guards
+            if avg_price is None or quantity is None:
+                embedder_logger.warning(f"Invalid position data for {symbol}: avg_price={avg_price}, quantity={quantity}")
+                continue
+            
             # Get current market data
             market_data = get_live_market_data(symbol)
             if market_data:
                 new_price = market_data["price"]
-                unrealized_pnl = (new_price - avg_price) * quantity
-                
-                # Update position
-                cursor.execute('''
-                    UPDATE positions 
-                    SET current_price = ?, unrealized_pnl = ?, last_updated = ?
-                    WHERE id = ?
-                ''', (
-                    new_price,
-                    unrealized_pnl,
-                    datetime.now(timezone.utc).isoformat(),
-                    pos_id
-                ))
-                
-                embedder_logger.debug(f"Updated position {symbol}: PnL ${unrealized_pnl:.2f}")
+                if new_price is not None and not np.isnan(new_price):
+                    unrealized_pnl = (new_price - avg_price) * quantity
+                    
+                    # Update position
+                    cursor.execute('''
+                        UPDATE positions 
+                        SET current_price = ?, unrealized_pnl = ?, last_updated = ?
+                        WHERE id = ?
+                    ''', (
+                        new_price,
+                        unrealized_pnl,
+                        datetime.now(timezone.utc).isoformat(),
+                        pos_id
+                    ))
+                    
+                    embedder_logger.debug(f"Updated position {symbol}: PnL ${unrealized_pnl:.2f}")
+                else:
+                    embedder_logger.warning(f"Invalid market price for {symbol}: {new_price}")
+            else:
+                embedder_logger.warning(f"Could not get market data for position {symbol}")
         
         conn.commit()
         conn.close()

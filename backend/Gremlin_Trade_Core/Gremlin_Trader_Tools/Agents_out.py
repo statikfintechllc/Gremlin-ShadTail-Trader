@@ -346,24 +346,37 @@ class AgentOutputHandler:
             entry_type = entry.get("type", "general")
             importance = self._calculate_entry_importance(entry)
             
-            # Only create embeddings for important entries
-            if importance < 0.3:
+            # Add null guard for importance
+            if importance is None or importance < 0.3:
                 return
             
             # Create text content for embedding
             content = self._generate_embedding_content(entry)
             
+            # Add null guard for content
+            if not content:
+                agents_out_logger.warning("Empty content generated for embedding")
+                return
+            
             # Generate embedding vector
             vector = embed_text(content)
             
-            # Prepare metadata
+            # Add null guard for vector
+            if vector is None:
+                agents_out_logger.warning("Failed to generate embedding vector")
+                return
+            
+            # Prepare metadata - flatten any nested structures for ChromaDB compatibility
             metadata = {
                 'content_type': f'agent_log_{entry_type}',
                 'source': 'agents_out',
-                'original_entry': entry,
                 'importance_score': importance,
                 'agent_source': entry.get('agent_name', 'unknown'),
-                'processing_timestamp': entry.get('processed_at')
+                'processing_timestamp': entry.get('processed_at'),
+                'entry_id': entry.get('id', 'unknown'),
+                'symbol': entry.get('symbol', ''),
+                'action': entry.get('action', ''),
+                'confidence': entry.get('confidence', 0.0)
             }
             
             # Create and store embedding
@@ -395,16 +408,18 @@ class AgentOutputHandler:
             }
             importance += type_importance.get(entry_type, 0.2)
             
-            # Confidence-based importance
-            confidence = entry.get("confidence", 0)
-            if confidence > 0:
+            # Confidence-based importance - add null guards
+            confidence = entry.get("confidence")
+            if confidence is not None and confidence > 0:
                 importance += confidence * 0.3
             
-            # Volume/price-based importance
-            if entry.get("volume", 0) > 1000000:
+            # Volume/price-based importance - add null guards
+            volume = entry.get("volume")
+            if volume is not None and volume > 1000000:
                 importance += 0.2
             
-            if entry.get("price", 0) > 0:
+            price = entry.get("price")
+            if price is not None and price > 0:
                 importance += 0.1
             
             # Error severity
