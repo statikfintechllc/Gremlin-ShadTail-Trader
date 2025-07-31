@@ -17,8 +17,12 @@ sys.path.insert(0, str(project_root))
 
 from Gremlin_Trade_Core.globals import (
     logger, setup_module_logger, CFG, MEM,
-    LOGS_DIR, STRATEGIES_DIR, METADATA_DB_PATH
+    LOGS_DIR, STRATEGIES_DIR, METADATA_DB_PATH, embed_text
 )
+
+# Import memory system components
+from Gremlin_Trade_Memory.embedder import store_embedding, package_embedding
+from Gremlin_Trade_Memory.Agent_in import send_data_to_agent, get_memory_system_status
 
 # Setup module logger
 agents_out_logger = setup_module_logger("agents", "output_handler")
@@ -35,13 +39,22 @@ class AgentOutputHandler:
         self.log_buffer = []
         self.strategy_buffer = []
         self.performance_buffer = []
+        self.memory_integration_buffer = []
         
         # Ensure output directories exist
         LOGS_DIR.mkdir(parents=True, exist_ok=True)
         STRATEGIES_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Communication stats
+        self.communication_stats = {
+            'total_logs_processed': 0,
+            'memory_embeddings_created': 0,
+            'agent_notifications_sent': 0,
+            'errors': 0
+        }
     
     def process_agent_logs(self, log_entries: List[Dict[str, Any]]):
-        """Process logs from all agents"""
+        """Process logs from all agents with enhanced memory integration"""
         try:
             for entry in log_entries:
                 # Add processing timestamp
@@ -50,15 +63,24 @@ class AgentOutputHandler:
                 # Categorize and route the log entry
                 self._categorize_log_entry(entry)
                 
+                # Create memory embedding for important entries
+                self._create_memory_embedding(entry)
+                
+                # Send data to relevant agents via Agent_in
+                self._notify_relevant_agents(entry)
+                
                 # Add to general log buffer
                 self.log_buffer.append(entry)
+                
+                self.communication_stats['total_logs_processed'] += 1
             
             # Flush logs to file
             self._flush_logs()
             
-            agents_out_logger.info(f"Processed {len(log_entries)} log entries")
+            agents_out_logger.info(f"Processed {len(log_entries)} log entries with memory integration")
             
         except Exception as e:
+            self.communication_stats['errors'] += 1
             agents_out_logger.error(f"Error processing agent logs: {e}")
     
     def _categorize_log_entry(self, entry: Dict[str, Any]):
@@ -317,6 +339,185 @@ class AgentOutputHandler:
         except Exception as e:
             agents_out_logger.error(f"Error recommending action: {e}")
             return "hold"
+                
+    def _create_memory_embedding(self, entry: Dict[str, Any]):
+        """Create memory embedding for important log entries"""
+        try:
+            entry_type = entry.get("type", "general")
+            importance = self._calculate_entry_importance(entry)
+            
+            # Only create embeddings for important entries
+            if importance < 0.3:
+                return
+            
+            # Create text content for embedding
+            content = self._generate_embedding_content(entry)
+            
+            # Generate embedding vector
+            vector = embed_text(content)
+            
+            # Prepare metadata
+            metadata = {
+                'content_type': f'agent_log_{entry_type}',
+                'source': 'agents_out',
+                'original_entry': entry,
+                'importance_score': importance,
+                'agent_source': entry.get('agent_name', 'unknown'),
+                'processing_timestamp': entry.get('processed_at')
+            }
+            
+            # Create and store embedding
+            embedding = package_embedding(content, vector, metadata)
+            store_embedding(embedding)
+            
+            self.communication_stats['memory_embeddings_created'] += 1
+            agents_out_logger.debug(f"Created memory embedding for {entry_type} entry with importance {importance:.2f}")
+            
+        except Exception as e:
+            agents_out_logger.error(f"Error creating memory embedding: {e}")
+    
+    def _calculate_entry_importance(self, entry: Dict[str, Any]) -> float:
+        """Calculate importance score for log entry"""
+        try:
+            importance = 0.1  # Base importance
+            
+            entry_type = entry.get("type", "general")
+            
+            # Type-based importance
+            type_importance = {
+                'signal': 0.8,
+                'trade': 0.9,
+                'position': 0.7,
+                'strategy': 0.6,
+                'performance': 0.7,
+                'error': 0.5,
+                'coordination_decision': 0.9
+            }
+            importance += type_importance.get(entry_type, 0.2)
+            
+            # Confidence-based importance
+            confidence = entry.get("confidence", 0)
+            if confidence > 0:
+                importance += confidence * 0.3
+            
+            # Volume/price-based importance
+            if entry.get("volume", 0) > 1000000:
+                importance += 0.2
+            
+            if entry.get("price", 0) > 0:
+                importance += 0.1
+            
+            # Error severity
+            if entry_type == "error":
+                severity = entry.get("severity", "medium")
+                if severity == "high":
+                    importance += 0.4
+                elif severity == "critical":
+                    importance += 0.6
+            
+            return min(1.0, importance)
+            
+        except Exception as e:
+            agents_out_logger.error(f"Error calculating entry importance: {e}")
+            return 0.5
+    
+    def _generate_embedding_content(self, entry: Dict[str, Any]) -> str:
+        """Generate text content for embedding"""
+        try:
+            entry_type = entry.get("type", "general")
+            
+            if entry_type == "signal":
+                return f"Trading signal for {entry.get('symbol', 'unknown')}: {entry.get('signal_type', 'unknown')} with {entry.get('confidence', 0):.2%} confidence at ${entry.get('price', 0):.2f}"
+            
+            elif entry_type == "trade":
+                return f"Trade execution: {entry.get('action', 'unknown')} {entry.get('symbol', 'unknown')} at ${entry.get('price', 0):.2f} quantity {entry.get('quantity', 0)}"
+            
+            elif entry_type == "position":
+                return f"Position update for {entry.get('symbol', 'unknown')}: {entry.get('quantity', 0)} shares with unrealized P&L ${entry.get('unrealized_pnl', 0):.2f}"
+            
+            elif entry_type == "strategy":
+                return f"Strategy insight: {entry.get('strategy_name', 'unknown')} with {entry.get('success_rate', 0):.2%} success rate"
+            
+            elif entry_type == "performance":
+                return f"Performance metric: {entry.get('metric_type', 'unknown')} = {entry.get('value', 'unknown')} for period {entry.get('period', 'unknown')}"
+            
+            elif entry_type == "error":
+                return f"System error in {entry.get('component', 'unknown')}: {entry.get('message', 'unknown error')}"
+            
+            else:
+                # Generic content generation
+                return f"Agent log entry: {entry_type} from {entry.get('agent_name', 'unknown')} - {entry.get('message', str(entry))}"
+            
+        except Exception as e:
+            agents_out_logger.error(f"Error generating embedding content: {e}")
+            return f"Log entry: {entry.get('type', 'unknown')} - {str(entry)[:100]}"
+    
+    def _notify_relevant_agents(self, entry: Dict[str, Any]):
+        """Notify relevant agents of new data via Agent_in"""
+        try:
+            entry_type = entry.get("type", "general")
+            source_agent = entry.get("agent_name", "unknown")
+            
+            # Determine which agents should be notified
+            relevant_agents = self._determine_relevant_agents(entry_type, entry)
+            
+            for agent_name in relevant_agents:
+                if agent_name != source_agent:  # Don't notify the source agent
+                    try:
+                        notification_data = {
+                            'query_type': entry_type,
+                            'context': {
+                                'symbol': entry.get('symbol'),
+                                'signal_type': entry.get('signal_type'),
+                                'confidence': entry.get('confidence'),
+                                'source_agent': source_agent,
+                                'timestamp': entry.get('timestamp')
+                            },
+                            'entry_summary': entry
+                        }
+                        
+                        success = send_data_to_agent(agent_name, notification_data)
+                        if success:
+                            self.communication_stats['agent_notifications_sent'] += 1
+                        
+                    except Exception as e:
+                        agents_out_logger.error(f"Error notifying {agent_name}: {e}")
+            
+        except Exception as e:
+            agents_out_logger.error(f"Error notifying relevant agents: {e}")
+    
+    def _determine_relevant_agents(self, entry_type: str, entry: Dict[str, Any]) -> List[str]:
+        """Determine which agents should be notified of this entry"""
+        try:
+            relevant_agents = []
+            
+            if entry_type == "signal":
+                relevant_agents.extend(["strategy_agent", "rule_agent", "risk_agent", "timing_agent"])
+            
+            elif entry_type == "trade":
+                relevant_agents.extend(["portfolio_tracker", "tax_estimator", "performance_tracker"])
+            
+            elif entry_type == "position":
+                relevant_agents.extend(["risk_agent", "portfolio_tracker"])
+            
+            elif entry_type == "strategy":
+                relevant_agents.extend(["coordinator", "performance_tracker"])
+            
+            elif entry_type == "performance":
+                relevant_agents.extend(["coordinator", "strategy_agent"])
+            
+            elif entry_type == "error":
+                relevant_agents.extend(["runtime_agent", "coordinator"])
+            
+            # Always notify coordinator for important events
+            if entry.get("confidence", 0) > 0.7 or entry_type in ["trade", "error"]:
+                relevant_agents.append("coordinator")
+            
+            return list(set(relevant_agents))  # Remove duplicates
+            
+        except Exception as e:
+            agents_out_logger.error(f"Error determining relevant agents: {e}")
+            return []
     
     def _flush_logs(self):
         """Flush all log buffers to files"""
@@ -388,13 +589,42 @@ class AgentOutputHandler:
         except Exception as e:
             agents_out_logger.error(f"Error getting performance summary: {e}")
             return {}
+            
+    def get_communication_statistics(self) -> Dict[str, Any]:
+        """Get statistics about agent communication and memory integration"""
+        try:
+            # Get memory system status
+            memory_status = get_memory_system_status()
+            
+            return {
+                'agents_out_stats': self.communication_stats,
+                'memory_system_status': memory_status,
+                'buffer_sizes': {
+                    'log_buffer': len(self.log_buffer),
+                    'strategy_buffer': len(self.strategy_buffer),
+                    'performance_buffer': len(self.performance_buffer),
+                    'memory_integration_buffer': len(self.memory_integration_buffer)
+                },
+                'recent_activity': {
+                    'logs_in_buffer': len(self.log_buffer),
+                    'total_processed': self.communication_stats['total_logs_processed']
+                }
+            }
+            
+        except Exception as e:
+            agents_out_logger.error(f"Error getting communication statistics: {e}")
+            return {'error': str(e)}
+
+        except Exception as e:
+            agents_out_logger.error(f"Error recommending action: {e}")
+            return "hold"
 
 # Global output handler instance
 output_handler = AgentOutputHandler()
 
 # Export main functions
 def process_agent_logs(log_entries: List[Dict[str, Any]]):
-    """Process logs from agents"""
+    """Process logs from agents with memory integration"""
     return output_handler.process_agent_logs(log_entries)
 
 def get_recent_logs(limit: int = 100) -> List[Dict[str, Any]]:
@@ -404,6 +634,10 @@ def get_recent_logs(limit: int = 100) -> List[Dict[str, Any]]:
 def get_performance_summary() -> Dict[str, Any]:
     """Get performance summary"""
     return output_handler.get_performance_summary()
+
+def get_communication_statistics() -> Dict[str, Any]:
+    """Get agent communication and memory integration statistics"""
+    return output_handler.get_communication_statistics()
 
 def flush_all_buffers():
     """Flush all buffers to files"""

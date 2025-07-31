@@ -16,12 +16,43 @@ from enum import Enum
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent))
+sys.path.append(str(Path(__file__).parent.parent))
 
-from Gremlin_Trade_Core.Gremlin_Trader_Tools.Memory_Agent.base_memory_agent import BaseMemoryAgent
+# Import memory system
+from Gremlin_Trade_Memory.embedder import store_embedding, package_embedding, get_all_embeddings
+from Gremlin_Trade_Core.globals import logger as globals_logger, MEM, embed_text
+
+# Import all available agents
+from Gremlin_Trader_Tools.Memory_Agent.base_memory_agent import BaseMemoryAgent
 from Gremlin_Trader_Tools.Timing_Agent.market_timing import MarketTimingAgent
 from Gremlin_Trader_Tools.Strategy_Agent.strategy_agent import StrategyAgent
 from Gremlin_Trader_Tools.Rule_Set_Agent.rule_set_agent import RuleSetAgent
 from Gremlin_Trader_Tools.Run_Time_Agent.runtime_agent import RuntimeAgent
+from Gremlin_Trader_Tools.Service_Agents.market_data_service import MarketDataService
+from Gremlin_Trader_Tools.Service_Agents.simple_market_service import SimpleMarketService
+from Gremlin_Trader_Tools.Tool_Control_Agent.portfolio_tracker import PortfolioTracker
+from Gremlin_Trader_Tools.Tool_Control_Agent.tool_control_agent import ToolControlAgent
+from Gremlin_Trader_Tools.Strategy_Agent.signal_generator import SignalGenerator
+from Gremlin_Trader_Tools.Rule_Set_Agent.rules_engine import RulesEngine
+from Gremlin_Trader_Tools.Financial_Agent.tax_estimator import TaxEstimator
+from Gremlin_Trader_Tools.Run_Time_Agent.stock_scraper import StockScraper
+
+# Import trade agents (optional due to external dependencies)
+try:
+    from Gremlin_Trader_Tools.Trade_Agents.IBKR_API_trader import IBKRTrader
+    IBKR_AVAILABLE = True
+except ImportError:
+    globals_logger.warning("IBKR trader not available - check ib_insync installation")
+    IBKRTrader = None
+    IBKR_AVAILABLE = False
+
+try:
+    from Gremlin_Trader_Tools.Trade_Agents.Kalshi_API_trader import KalshiTrader
+    KALSHI_AVAILABLE = True
+except ImportError:
+    globals_logger.warning("Kalshi trader not available - check dependencies")
+    KalshiTrader = None
+    KALSHI_AVAILABLE = False
 
 class CoordinationMode(Enum):
     CONSERVATIVE = "conservative"
@@ -59,11 +90,22 @@ class AgentCoordinator(BaseMemoryAgent):
     def __init__(self):
         super().__init__("AgentCoordinator", "coordinator")
         
-        # Initialize agents
+        # Initialize all agent instances
+        self.memory_agent = None
         self.timing_agent = None
         self.strategy_agent = None
         self.rule_agent = None
         self.runtime_agent = None
+        self.market_data_service = None
+        self.simple_market_service = None
+        self.portfolio_tracker = None
+        self.tool_control_agent = None
+        self.signal_generator = None
+        self.rules_engine = None
+        self.tax_estimator = None
+        self.stock_scraper = None
+        self.ibkr_trader = None
+        self.kalshi_trader = None
         
         # Coordination parameters
         self.coordination_mode = CoordinationMode.BALANCED
@@ -75,10 +117,14 @@ class AgentCoordinator(BaseMemoryAgent):
         self.pending_decisions: Dict[str, TradingDecision] = {}
         self.executed_decisions: Dict[str, TradingDecision] = {}
         self.agent_weights = {
-            'timing': 0.25,
-            'strategy': 0.35,
-            'rules': 0.25,
-            'runtime': 0.15
+            'memory': 0.10,
+            'timing': 0.20,
+            'strategy': 0.25,
+            'rules': 0.20,
+            'runtime': 0.10,
+            'market_data': 0.05,
+            'portfolio': 0.05,
+            'signals': 0.05
         }
         
         # Performance tracking
@@ -90,71 +136,277 @@ class AgentCoordinator(BaseMemoryAgent):
             'total_pnl': 0.0
         }
         
+        # Agent status tracking
+        self.agent_status = {}
+        
         # Watchlist management
         self.active_watchlist = ["AAPL", "MSFT", "TSLA", "NVDA", "SPY", "QQQ"]
         self.symbol_priorities = {}
         
-        self.logger.info("Agent Coordinator initialized")
+        self.logger.info("Agent Coordinator initialized with enhanced agent orchestration")
     
     async def initialize_agents(self):
-        """Initialize and start all trading agents"""
+        """Initialize and start all 15 trading agents with comprehensive logging"""
         try:
-            self.logger.info("Initializing trading agents...")
+            self.logger.info("Initializing all 15 trading agents...")
             
-            # Initialize Runtime Agent first
-            self.runtime_agent = RuntimeAgent()
-            await self.runtime_agent.start()
+            # 1. Initialize Base Memory Agent
+            try:
+                self.memory_agent = BaseMemoryAgent("CoordinatorMemory", "coordinator_memory")
+                await self.memory_agent.start()
+                self.agent_status['memory'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Memory Agent initialized and started")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Memory Agent: {e}")
+                self.agent_status['memory'] = {'initialized': False, 'error': str(e)}
             
-            # Initialize other agents
-            self.timing_agent = MarketTimingAgent()
-            self.strategy_agent = StrategyAgent()
-            self.rule_agent = RuleSetAgent()
+            # 2. Initialize Runtime Agent (needed first for managing others)
+            try:
+                self.runtime_agent = RuntimeAgent()
+                await self.runtime_agent.start()
+                self.agent_status['runtime'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Runtime Agent initialized and started")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Runtime Agent: {e}")
+                self.agent_status['runtime'] = {'initialized': False, 'error': str(e)}
             
-            # Register agents with runtime agent
-            await self.runtime_agent.register_agent("timing_agent", self.timing_agent)
-            await self.runtime_agent.register_agent("strategy_agent", self.strategy_agent)
-            await self.runtime_agent.register_agent("rule_agent", self.rule_agent)
+            # 3. Initialize Market Data Service
+            try:
+                self.market_data_service = MarketDataService()
+                await self.market_data_service.start()
+                self.agent_status['market_data'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Market Data Service initialized and started")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Market Data Service: {e}")
+                self.agent_status['market_data'] = {'initialized': False, 'error': str(e)}
             
-            # Start all agents
-            await self.timing_agent.start()
-            await self.strategy_agent.start()
-            await self.rule_agent.start()
+            # 4. Initialize Simple Market Service
+            try:
+                self.simple_market_service = SimpleMarketService()
+                self.agent_status['simple_market'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Simple Market Service initialized")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Simple Market Service: {e}")
+                self.agent_status['simple_market'] = {'initialized': False, 'error': str(e)}
             
-            # Start runtime management
-            await self.runtime_agent.start_agent("timing_agent")
-            await self.runtime_agent.start_agent("strategy_agent")
-            await self.runtime_agent.start_agent("rule_agent")
+            # 5. Initialize Signal Generator
+            try:
+                self.signal_generator = SignalGenerator()
+                self.agent_status['signal_generator'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Signal Generator initialized")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Signal Generator: {e}")
+                self.agent_status['signal_generator'] = {'initialized': False, 'error': str(e)}
             
-            self.logger.info("All trading agents initialized and started")
+            # 6. Initialize Strategy Agent
+            try:
+                self.strategy_agent = StrategyAgent()
+                await self.strategy_agent.start()
+                self.agent_status['strategy'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Strategy Agent initialized and started")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Strategy Agent: {e}")
+                self.agent_status['strategy'] = {'initialized': False, 'error': str(e)}
+            
+            # 7. Initialize Rules Engine
+            try:
+                self.rules_engine = RulesEngine()
+                self.agent_status['rules_engine'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Rules Engine initialized")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Rules Engine: {e}")
+                self.agent_status['rules_engine'] = {'initialized': False, 'error': str(e)}
+            
+            # 8. Initialize Rule Set Agent
+            try:
+                self.rule_agent = RuleSetAgent()
+                await self.rule_agent.start()
+                self.agent_status['rules'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Rule Set Agent initialized and started")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Rule Set Agent: {e}")
+                self.agent_status['rules'] = {'initialized': False, 'error': str(e)}
+            
+            # 9. Initialize Market Timing Agent
+            try:
+                self.timing_agent = MarketTimingAgent()
+                await self.timing_agent.start()
+                self.agent_status['timing'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Market Timing Agent initialized and started")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Market Timing Agent: {e}")
+                self.agent_status['timing'] = {'initialized': False, 'error': str(e)}
+            
+            # 10. Initialize Portfolio Tracker
+            try:
+                self.portfolio_tracker = PortfolioTracker()
+                await self.portfolio_tracker.start()
+                self.agent_status['portfolio'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Portfolio Tracker initialized and started")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Portfolio Tracker: {e}")
+                self.agent_status['portfolio'] = {'initialized': False, 'error': str(e)}
+            
+            # 11. Initialize Tool Control Agent
+            try:
+                self.tool_control_agent = ToolControlAgent()
+                await self.tool_control_agent.start()
+                self.agent_status['tool_control'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Tool Control Agent initialized and started")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Tool Control Agent: {e}")
+                self.agent_status['tool_control'] = {'initialized': False, 'error': str(e)}
+            
+            # 12. Initialize Stock Scraper
+            try:
+                self.stock_scraper = StockScraper()
+                self.agent_status['stock_scraper'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Stock Scraper initialized")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Stock Scraper: {e}")
+                self.agent_status['stock_scraper'] = {'initialized': False, 'error': str(e)}
+            
+            # 13. Initialize Tax Estimator
+            try:
+                self.tax_estimator = TaxEstimator()
+                self.agent_status['tax_estimator'] = {'initialized': True, 'active': True}
+                self.logger.info("✓ Tax Estimator initialized")
+            except Exception as e:
+                self.logger.error(f"✗ Failed to initialize Tax Estimator: {e}")
+                self.agent_status['tax_estimator'] = {'initialized': False, 'error': str(e)}
+            
+            # 14. Initialize IBKR Trader (optional)
+            if IBKR_AVAILABLE and IBKRTrader:
+                try:
+                    self.ibkr_trader = IBKRTrader()
+                    self.agent_status['ibkr_trader'] = {'initialized': True, 'active': True}
+                    self.logger.info("✓ IBKR Trader initialized")
+                except Exception as e:
+                    self.logger.error(f"✗ Failed to initialize IBKR Trader: {e}")
+                    self.agent_status['ibkr_trader'] = {'initialized': False, 'error': str(e)}
+            else:
+                self.agent_status['ibkr_trader'] = {'initialized': False, 'error': 'Not available'}
+                self.logger.warning("⚠ IBKR Trader not available")
+            
+            # 15. Initialize Kalshi Trader (optional)
+            if KALSHI_AVAILABLE and KalshiTrader:
+                try:
+                    self.kalshi_trader = KalshiTrader()
+                    self.agent_status['kalshi_trader'] = {'initialized': True, 'active': True}
+                    self.logger.info("✓ Kalshi Trader initialized")
+                except Exception as e:
+                    self.logger.error(f"✗ Failed to initialize Kalshi Trader: {e}")
+                    self.agent_status['kalshi_trader'] = {'initialized': False, 'error': str(e)}
+            else:
+                self.agent_status['kalshi_trader'] = {'initialized': False, 'error': 'Not available'}
+                self.logger.warning("⚠ Kalshi Trader not available")
+            
+            # Register agents with runtime agent if available
+            if self.runtime_agent:
+                agents_to_register = [
+                    ("memory_agent", self.memory_agent),
+                    ("timing_agent", self.timing_agent),
+                    ("strategy_agent", self.strategy_agent),
+                    ("rule_agent", self.rule_agent),
+                    ("market_data_service", self.market_data_service),
+                    ("portfolio_tracker", self.portfolio_tracker),
+                    ("tool_control_agent", self.tool_control_agent)
+                ]
+                
+                for agent_name, agent in agents_to_register:
+                    if agent:
+                        try:
+                            await self.runtime_agent.register_agent(agent_name, agent)
+                            await self.runtime_agent.start_agent(agent_name)
+                            self.logger.info(f"✓ Registered and started {agent_name} with runtime agent")
+                        except Exception as e:
+                            self.logger.error(f"✗ Failed to register {agent_name}: {e}")
+            
+            # Summary
+            initialized_count = sum(1 for status in self.agent_status.values() if status.get('initialized', False))
+            total_count = len(self.agent_status)
+            
+            self.logger.info(f"Agent initialization complete: {initialized_count}/{total_count} agents successfully initialized")
+            
+            # Store initialization event in memory
+            await self._store_initialization_event()
             
         except Exception as e:
-            self.logger.error(f"Error initializing agents: {e}")
+            self.logger.error(f"Critical error during agent initialization: {e}")
             raise
     
     async def shutdown_agents(self):
-        """Shutdown all trading agents"""
+        """Shutdown all trading agents with comprehensive logging"""
         try:
-            self.logger.info("Shutting down trading agents...")
+            self.logger.info("Shutting down all trading agents...")
             
-            agents = [
+            # Create list of all agents to shutdown
+            agents_to_shutdown = [
+                ("memory_agent", self.memory_agent),
                 ("timing_agent", self.timing_agent),
                 ("strategy_agent", self.strategy_agent),
                 ("rule_agent", self.rule_agent),
-                ("runtime_agent", self.runtime_agent)
+                ("runtime_agent", self.runtime_agent),
+                ("market_data_service", self.market_data_service),
+                ("portfolio_tracker", self.portfolio_tracker),
+                ("tool_control_agent", self.tool_control_agent),
+                ("ibkr_trader", self.ibkr_trader),
+                ("kalshi_trader", self.kalshi_trader)
             ]
             
-            for agent_name, agent in agents:
+            shutdown_count = 0
+            for agent_name, agent in agents_to_shutdown:
                 if agent:
                     try:
-                        await agent.stop()
-                        self.logger.info(f"Stopped {agent_name}")
+                        if hasattr(agent, 'stop'):
+                            await agent.stop()
+                        elif hasattr(agent, 'shutdown'):
+                            await agent.shutdown()
+                        
+                        # Update agent status
+                        if agent_name in self.agent_status:
+                            self.agent_status[agent_name]['active'] = False
+                        
+                        self.logger.info(f"✓ Stopped {agent_name}")
+                        shutdown_count += 1
+                        
                     except Exception as e:
-                        self.logger.error(f"Error stopping {agent_name}: {e}")
+                        self.logger.error(f"✗ Error stopping {agent_name}: {e}")
+                        if agent_name in self.agent_status:
+                            self.agent_status[agent_name]['shutdown_error'] = str(e)
             
-            self.logger.info("All agents shut down")
+            self.logger.info(f"Agent shutdown complete: {shutdown_count} agents stopped")
+            
+            # Store shutdown event in memory
+            await self._store_shutdown_event(shutdown_count)
             
         except Exception as e:
             self.logger.error(f"Error shutting down agents: {e}")
+    
+    async def _store_shutdown_event(self, shutdown_count: int):
+        """Store agent shutdown event in memory"""
+        try:
+            content = f"Agent Coordinator shutdown completed: {shutdown_count} agents stopped"
+            
+            # Create embedding
+            vector = embed_text(content)
+            
+            metadata = {
+                'content_type': 'agent_shutdown',
+                'source': 'agent_coordinator',
+                'shutdown_count': shutdown_count,
+                'agent_status': self.agent_status.copy(),
+                'coordination_mode': self.coordination_mode.value,
+                'importance_score': 0.8
+            }
+            
+            embedding = package_embedding(content, vector, metadata)
+            store_embedding(embedding)
+            
+            self.logger.info(f"Stored shutdown event in memory: {shutdown_count} agents")
+            
+        except Exception as e:
+            self.logger.error(f"Error storing shutdown event: {e}")
     
     async def coordinate_trading_decision(self, symbol: str) -> Optional[TradingDecision]:
         """Coordinate trading decision for a symbol across all agents"""
@@ -453,12 +705,69 @@ class AgentCoordinator(BaseMemoryAgent):
         except Exception:
             return action, confidence, position_size
     
-    async def _store_coordination_decision(self, decision: TradingDecision):
-        """Store coordination decision in memory"""
+    async def _store_initialization_event(self):
+        """Store agent initialization event in memory system"""
         try:
-            content = f"Coordination decision: {decision.action} {decision.symbol} at ${decision.entry_price:.2f} with {decision.confidence:.2%} confidence"
+            initialized_count = sum(1 for status in self.agent_status.values() if status.get('initialized', False))
+            total_count = len(self.agent_status)
+            
+            # Create summary of initialization
+            agent_summary = {}
+            for agent_name, status in self.agent_status.items():
+                agent_summary[agent_name] = {
+                    'initialized': status.get('initialized', False),
+                    'active': status.get('active', False),
+                    'error': status.get('error', None) if not status.get('initialized', False) else None
+                }
+            
+            content = f"Agent Coordinator initialized {initialized_count}/{total_count} agents successfully"
+            
+            # Create embedding
+            vector = embed_text(content)
+            
+            # Package with detailed metadata
+            metadata = {
+                'content_type': 'agent_initialization',
+                'source': 'agent_coordinator',
+                'initialized_count': initialized_count,
+                'total_count': total_count,
+                'success_rate': initialized_count / total_count,
+                'agent_summary': agent_summary,
+                'coordination_mode': self.coordination_mode.value,
+                'importance_score': 0.9  # High importance for initialization events
+            }
+            
+            embedding = package_embedding(content, vector, metadata)
+            
+            # Store in memory system
+            store_embedding(embedding)
+            
+            self.logger.info(f"Stored initialization event in memory: {initialized_count}/{total_count} agents")
+            
+        except Exception as e:
+            self.logger.error(f"Error storing initialization event: {e}")
+
+    async def _store_coordination_decision(self, decision: TradingDecision):
+        """Store coordination decision in memory with agent interactions"""
+        try:
+            # Enhanced content with agent interaction details
+            content = f"Coordination decision: {decision.action} {decision.symbol} at ${decision.entry_price:.2f} with {decision.confidence:.2%} confidence. Contributing agents: {', '.join(decision.contributing_agents)}"
+            
+            # Check which agents contributed data
+            agent_interactions = {}
+            for agent_name in decision.contributing_agents:
+                if agent_name in self.agent_status:
+                    agent_interactions[agent_name] = {
+                        'active': self.agent_status[agent_name].get('active', False),
+                        'weight': self.agent_weights.get(agent_name, 0.0)
+                    }
+            
+            # Create embedding
+            vector = embed_text(content)
             
             metadata = {
+                'content_type': 'coordination_decision',
+                'source': 'agent_coordinator',
                 'symbol': decision.symbol,
                 'action': decision.action,
                 'confidence': decision.confidence,
@@ -466,11 +775,19 @@ class AgentCoordinator(BaseMemoryAgent):
                 'entry_price': decision.entry_price,
                 'risk_score': decision.risk_score,
                 'contributing_agents': decision.contributing_agents,
+                'agent_interactions': agent_interactions,
                 'coordination_mode': self.coordination_mode.value,
-                'trading_phase': self.trading_phase.value
+                'trading_phase': self.trading_phase.value,
+                'importance_score': decision.confidence  # Importance based on confidence
             }
             
+            embedding = package_embedding(content, vector, metadata)
+            store_embedding(embedding)
+            
+            # Also use the existing store_memory method
             self.store_memory(content, "coordination_decision", metadata)
+            
+            self.logger.info(f"Stored coordination decision in memory with agent interactions: {decision.symbol}")
             
         except Exception as e:
             self.logger.error(f"Error storing coordination decision: {e}")
@@ -580,13 +897,95 @@ class AgentCoordinator(BaseMemoryAgent):
             self.logger.error(f"Error recording trading outcome for {symbol}: {e}")
     
     async def get_coordination_overview(self) -> Dict:
-        """Get comprehensive coordination overview"""
+        """Get comprehensive coordination overview for all agents"""
         try:
-            # Get overviews from all agents
-            timing_overview = await self.timing_agent.get_market_timing_overview() if self.timing_agent else {}
-            strategy_overview = await self.strategy_agent.get_strategy_overview() if self.strategy_agent else {}
-            rule_overview = await self.rule_agent.get_rule_overview() if self.rule_agent else {}
-            runtime_overview = await self.runtime_agent.get_runtime_overview() if self.runtime_agent else {}
+            # Get overviews from all available agents
+            agent_overviews = {}
+            
+            # Core agents
+            if self.timing_agent:
+                try:
+                    agent_overviews['timing'] = await self.timing_agent.get_market_timing_overview()
+                except Exception as e:
+                    agent_overviews['timing'] = {'error': str(e)}
+            
+            if self.strategy_agent:
+                try:
+                    agent_overviews['strategy'] = await self.strategy_agent.get_strategy_overview()
+                except Exception as e:
+                    agent_overviews['strategy'] = {'error': str(e)}
+            
+            if self.rule_agent:
+                try:
+                    agent_overviews['rules'] = await self.rule_agent.get_rule_overview()
+                except Exception as e:
+                    agent_overviews['rules'] = {'error': str(e)}
+            
+            if self.runtime_agent:
+                try:
+                    agent_overviews['runtime'] = await self.runtime_agent.get_runtime_overview()
+                except Exception as e:
+                    agent_overviews['runtime'] = {'error': str(e)}
+            
+            # Service agents
+            if self.market_data_service:
+                try:
+                    agent_overviews['market_data'] = self.market_data_service.get_status()
+                except Exception as e:
+                    agent_overviews['market_data'] = {'error': str(e)}
+            
+            if self.portfolio_tracker:
+                try:
+                    agent_overviews['portfolio'] = await self.portfolio_tracker.get_portfolio_overview()
+                except Exception as e:
+                    agent_overviews['portfolio'] = {'error': str(e)}
+            
+            if self.tool_control_agent:
+                try:
+                    agent_overviews['tool_control'] = await self.tool_control_agent.get_status()
+                except Exception as e:
+                    agent_overviews['tool_control'] = {'error': str(e)}
+            
+            # Memory system overview
+            if self.memory_agent:
+                try:
+                    agent_overviews['memory'] = self.memory_agent.get_agent_state()
+                except Exception as e:
+                    agent_overviews['memory'] = {'error': str(e)}
+            
+            # Trading agents
+            if self.ibkr_trader:
+                try:
+                    agent_overviews['ibkr_trader'] = self.ibkr_trader.get_status()
+                except Exception as e:
+                    agent_overviews['ibkr_trader'] = {'error': str(e)}
+            
+            if self.kalshi_trader:
+                try:
+                    agent_overviews['kalshi_trader'] = self.kalshi_trader.get_status()
+                except Exception as e:
+                    agent_overviews['kalshi_trader'] = {'error': str(e)}
+            
+            # Utility agents
+            if self.tax_estimator:
+                try:
+                    agent_overviews['tax_estimator'] = {'status': 'active', 'type': 'utility'}
+                except Exception as e:
+                    agent_overviews['tax_estimator'] = {'error': str(e)}
+            
+            if self.stock_scraper:
+                try:
+                    agent_overviews['stock_scraper'] = {'status': 'active', 'type': 'data_collection'}
+                except Exception as e:
+                    agent_overviews['stock_scraper'] = {'error': str(e)}
+            
+            # Get memory system statistics
+            try:
+                memory_stats = get_all_embeddings(limit=1)  # Just get count
+                memory_count = len(get_all_embeddings(limit=100))
+            except Exception as e:
+                memory_count = 0
+                self.logger.error(f"Error getting memory stats: {e}")
             
             return {
                 'coordinator_status': self.get_agent_state(),
@@ -598,17 +997,24 @@ class AgentCoordinator(BaseMemoryAgent):
                 'executed_decisions': len(self.executed_decisions),
                 'agent_weights': self.agent_weights,
                 'consensus_threshold': self.consensus_threshold,
-                'agent_overviews': {
-                    'timing': timing_overview,
-                    'strategy': strategy_overview,
-                    'rules': rule_overview,
-                    'runtime': runtime_overview
-                }
+                'agent_status': self.agent_status,
+                'memory_system': {
+                    'embedding_count': memory_count,
+                    'memory_config': MEM
+                },
+                'agent_overviews': agent_overviews,
+                'total_agents': len(self.agent_status),
+                'active_agents': sum(1 for status in self.agent_status.values() if status.get('active', False)),
+                'initialized_agents': sum(1 for status in self.agent_status.values() if status.get('initialized', False))
             }
             
         except Exception as e:
             self.logger.error(f"Error getting coordination overview: {e}")
-            return {}
+            return {
+                'error': str(e),
+                'coordinator_status': 'error',
+                'agent_status': self.agent_status
+            }
     
     async def update_coordination_mode(self, new_mode: CoordinationMode):
         """Update coordination mode"""
