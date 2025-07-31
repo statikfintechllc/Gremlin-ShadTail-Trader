@@ -134,7 +134,7 @@ function startBackend() {
     command = 'poetry';
     args = ['run', 'uvicorn', 'server:app', '--host', '0.0.0.0', '--port', '8000'];
   } else {
-    // Production mode - use Poetry from packaged backend
+    // Production mode - use Poetry from packaged backend with proper virtual environment
     const possibleBackendPaths = [
       path.join(process.resourcesPath, 'backend'),
       path.join(__dirname, '../backend'),
@@ -151,101 +151,19 @@ function startBackend() {
     
     console.log('Using backend path:', backendPath);
     
-    // Check if Poetry virtual environment exists, if not create it
-    let usePoetry = false;
-    const poetryEnvPath = path.join(backendPath, '.venv');
+    // Always use Poetry in production for proper dependency management
+    command = 'poetry';
+    args = ['run', 'uvicorn', 'server:app', '--host', '0.0.0.0', '--port', '8000'];
     
-    try {
-      // Check if Poetry is available
-      require('child_process').execSync('poetry --version', { stdio: 'ignore' });
-      
-      // If .venv doesn't exist, create it
-      if (!fs.existsSync(poetryEnvPath)) {
-        console.log('Creating Poetry virtual environment...');
+    // Ensure Poetry virtual environment exists
+    const poetryEnvPath = path.join(backendPath, '.venv');
+    if (!fs.existsSync(poetryEnvPath)) {
+      console.log('Creating Poetry virtual environment...');
+      try {
         require('child_process').execSync('poetry config virtualenvs.in-project true', { cwd: backendPath, stdio: 'inherit' });
         require('child_process').execSync('poetry install', { cwd: backendPath, stdio: 'inherit' });
-      }
-      
-      if (fs.existsSync(poetryEnvPath)) {
-        usePoetry = true;
-        console.log('Poetry and virtual environment available, using Poetry mode');
-      } else {
-        console.log('Failed to create virtual environment, using direct Python mode');
-      }
-    } catch {
-      console.log('Poetry not available, using direct Python mode');
-    }
-    
-    if (usePoetry) {
-      // Use Poetry if available (better for development/local builds)
-      command = 'poetry';
-      args = ['run', 'uvicorn', 'server:app', '--host', '0.0.0.0', '--port', '8000'];
-    } else if (fs.existsSync(poetryEnvPath)) {
-      // Use bundled virtual environment directly
-      const venvPython = path.join(poetryEnvPath, 'bin', 'python');
-      if (fs.existsSync(venvPython)) {
-        command = venvPython;
-        args = ['-m', 'uvicorn', 'server:app', '--host', '0.0.0.0', '--port', '8000'];
-        console.log('Using bundled virtual environment directly');
-      } else {
-        // Fallback to system Python
-        const pythonExecutables = [
-          'python3',
-          'python',
-          '/usr/bin/python3',
-          '/usr/bin/python'
-        ];
-        
-        command = pythonExecutables.find(p => {
-          try {
-            require('child_process').execSync(`which ${p}`, { stdio: 'ignore' });
-            return true;
-          } catch {
-            return false;
-          }
-        }) || 'python3';
-        
-        args = ['-m', 'uvicorn', 'server:app', '--host', '0.0.0.0', '--port', '8000'];
-        
-        // Set comprehensive PYTHONPATH for production
-        const pythonPaths = [
-          backendPath,
-          path.join(backendPath, 'Gremlin_Trade_Core'),
-          path.join(backendPath, 'Gremlin_Trade_Memory'),
-          process.env.PYTHONPATH || ''
-        ].filter(Boolean);
-        
-        process.env.PYTHONPATH = pythonPaths.join(':');
-      }
-    } else {
-      // Direct Python mode for true production builds
-      const pythonExecutables = [
-        'python3',
-        'python',
-        '/usr/bin/python3',
-          '/usr/bin/python'
-        ];
-        
-        command = pythonExecutables.find(p => {
-          try {
-            require('child_process').execSync(`which ${p}`, { stdio: 'ignore' });
-            return true;
-          } catch {
-            return false;
-          }
-        }) || 'python3';
-        
-        args = ['-m', 'uvicorn', 'server:app', '--host', '0.0.0.0', '--port', '8000'];
-        
-        // Set comprehensive PYTHONPATH for production
-        const pythonPaths = [
-          backendPath,
-          path.join(backendPath, 'Gremlin_Trade_Core'),
-          path.join(backendPath, 'Gremlin_Trade_Memory'),
-          process.env.PYTHONPATH || ''
-        ].filter(Boolean);
-        
-        process.env.PYTHONPATH = pythonPaths.join(':');
+      } catch (error) {
+        console.error('Failed to create Poetry environment:', error);
       }
     }
   }

@@ -12,7 +12,7 @@
     "dev:electron": "wait-on http://localhost:4321 && cross-env NODE_ENV=development electron .",
     "build": "npm run build:backend && npm run build:frontend",
     "build:frontend": "cd frontend && npm run build",
-    "build:backend": "cd backend && mkdir -p dist && cp -r * dist/ 2>/dev/null || true",
+    "build:backend": "cd backend && poetry config virtualenvs.in-project true && poetry install && mkdir -p dist && cp -r * dist/ 2>/dev/null || true",
     "start": "npm run build:backend && npm run build:frontend && node scripts/bootstrap.js",
     "start:safe": "npm run build:backend && npm run build:frontend && electron . --no-sandbox --disable-dev-shm-usage --disable-gpu",
     "start:display": "npm run build:backend && npm run build:frontend && DISPLAY=:0 electron . --no-sandbox --disable-dev-shm-usage",

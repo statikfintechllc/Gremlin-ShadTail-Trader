@@ -416,3 +416,4 @@ except Exception as e:
     agents_out_logger.error(f"Error initializing agent output handler: {e}")
 
 if __name__ == "__main__":
+    pass
