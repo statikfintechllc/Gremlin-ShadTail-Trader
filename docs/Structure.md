@@ -1,4 +1,7 @@
-.
+# Gremlin-ShadTail-Trader Structure
+
+```text
+•
 ├── .git
 │   ├── branches
 │   ├── hooks
@@ -189,3 +192,4 @@
 └── package.json
 
 60 directories, 128 files
+```
