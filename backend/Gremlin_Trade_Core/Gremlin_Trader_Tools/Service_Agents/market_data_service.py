@@ -6,7 +6,14 @@
 # Contact: ascend.gremlin@gmail.com
 # ─────────────────────────────────────────────────────────────
 
-import yfinance as yf
+# Handle optional imports gracefully for runtime validation
+try:
+    import yfinance as yf
+    YFINANCE_AVAILABLE = True
+except ImportError:
+    YFINANCE_AVAILABLE = False
+    yf = None
+
 import pandas as pd
 import numpy as np
 import asyncio
@@ -88,6 +95,11 @@ class RealMarketDataService:
             cache_key = f"{symbol}_{datetime.now().strftime('%Y%m%d_%H%M')}"
             if cache_key in self.cache:
                 return self.cache[cache_key]
+            
+            # Check if yfinance is available
+            if not YFINANCE_AVAILABLE:
+                market_logger.warning(f"yfinance not available, using fallback data for {symbol}")
+                return self._generate_fallback_stock_data(symbol)
             
             # Get data from yfinance
             ticker = yf.Ticker(symbol)
@@ -210,6 +222,16 @@ class RealMarketDataService:
     async def get_market_overview(self) -> Dict[str, Any]:
         """Get general market overview data"""
         try:
+            if not YFINANCE_AVAILABLE:
+                market_logger.warning("yfinance not available, using fallback market overview")
+                return {
+                    "SPY": {"price": 450.0, "change_pct": 0.5},
+                    "QQQ": {"price": 380.0, "change_pct": 0.8},
+                    "VIX": {"price": 18.5, "change_pct": -2.1},
+                    "fallback_data": True,
+                    "timestamp": datetime.now().isoformat()
+                }
+            
             # Major indices
             indices = ["^GSPC", "^DJI", "^IXIC", "^RUT"]  # S&P 500, Dow, NASDAQ, Russell 2000
             index_data = {}
@@ -228,9 +250,12 @@ class RealMarketDataService:
                     }
             
             # VIX (Volatility Index)
-            vix_ticker = yf.Ticker("^VIX")
-            vix_hist = vix_ticker.history(period="1d")
-            vix_value = float(vix_hist['Close'].iloc[-1]) if not vix_hist.empty else 20.0
+            if YFINANCE_AVAILABLE:
+                vix_ticker = yf.Ticker("^VIX")
+                vix_hist = vix_ticker.history(period="1d")
+                vix_value = float(vix_hist['Close'].iloc[-1]) if not vix_hist.empty else 20.0
+            else:
+                vix_value = 18.5  # Fallback value
             
             return {
                 "indices": index_data,
@@ -242,6 +267,34 @@ class RealMarketDataService:
         except Exception as e:
             market_logger.error(f"Error getting market overview: {e}")
             return {"error": "Unable to fetch market overview"}
+    
+    def _generate_fallback_stock_data(self, symbol: str) -> Dict[str, Any]:
+        """Generate fallback data for a single stock symbol"""
+        import random
+        
+        # Generate realistic but fake data
+        base_price = random.uniform(1.0, 9.99)  # Penny stock range
+        
+        return {
+            "symbol": symbol,
+            "price": round(base_price, 2),
+            "volume": random.randint(100000, 5000000),
+            "rotation": round(random.uniform(-5.0, 15.0), 2),
+            "up_pct": round(random.uniform(-10.0, 25.0), 2),
+            "ema": {
+                "5": round(base_price * random.uniform(0.95, 1.05), 2),
+                "20": round(base_price * random.uniform(0.90, 1.10), 2)
+            },
+            "vwap": round(base_price * random.uniform(0.98, 1.02), 2),
+            "rsi": round(random.uniform(20.0, 80.0), 1),
+            "indicators": {
+                "rsi": round(random.uniform(20.0, 80.0), 1),
+                "sma_5": round(base_price * random.uniform(0.95, 1.05), 2),
+                "ema_5": round(base_price * random.uniform(0.95, 1.05), 2),
+            },
+            "fallback_data": True,
+            "timestamp": datetime.now().isoformat()
+        }
     
     def _get_fallback_data(self) -> List[Dict[str, Any]]:
         """Fallback data when real data is unavailable"""
@@ -261,6 +314,9 @@ class RealMarketDataService:
 
 # Global instance
 real_market_service = RealMarketDataService()
+
+# Alias for backward compatibility
+MarketDataService = RealMarketDataService
 
 # Convenience functions for backward compatibility
 async def get_live_penny_stocks_real(limit: int = 50) -> List[Dict[str, Any]]:

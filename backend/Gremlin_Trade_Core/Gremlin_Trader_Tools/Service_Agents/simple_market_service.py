@@ -212,6 +212,9 @@ class SimpleMarketDataService:
 # Global instance
 simple_market_service = SimpleMarketDataService()
 
+# Alias for backward compatibility
+SimpleMarketService = SimpleMarketDataService
+
 # Convenience functions for backward compatibility
 async def get_live_penny_stocks_real(limit: int = 50) -> List[Dict[str, Any]]:
     """Get live penny stocks - working implementation"""
