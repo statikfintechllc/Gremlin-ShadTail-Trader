@@ -22,13 +22,12 @@
 
 # trading_core/stock_scraper.py
 
-from globals import random
-from datetime from globals import datetime
-from utils.logging_config import setup_module_logger
+import random
+import asyncio
+from globals import datetime, setup_module_logger
 
 # Initialize module-specific logger
 logger = setup_module_logger("trading_core", "stock_scraper")
-from globals import asyncio
 
 WATERMARK = "source:GremlinGPT"
 ORIGIN = "stock_scraper"
@@ -141,3 +140,39 @@ def get_live_penny_stocks():
     except Exception as e:
         logger.error(f"[SCRAPER] Source routing failed: {e}")
         return simulate_fallback()
+
+
+class StockScraper:
+    """Stock Scraper Agent for trading system"""
+    
+    def __init__(self):
+        self.logger = setup_module_logger("trading_core", "stock_scraper")
+        self.name = "StockScraper"
+        self.initialized = True
+        
+    def initialize(self):
+        """Initialize the stock scraper"""
+        try:
+            self.logger.info("StockScraper initialized")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error initializing StockScraper: {e}")
+            return False
+    
+    def process(self, data=None):
+        """Process stock scraping"""
+        try:
+            stocks = get_live_penny_stocks()
+            self.logger.info(f"Scraped {len(stocks)} stocks")
+            return stocks
+        except Exception as e:
+            self.logger.error(f"Error processing stock scraping: {e}")
+            return []
+    
+    def get_status(self):
+        """Get agent status"""
+        return {
+            "name": self.name,
+            "initialized": self.initialized,
+            "active": True
+        }

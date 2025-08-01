@@ -630,10 +630,6 @@ class AgentOutputHandler:
             agents_out_logger.error(f"Error getting communication statistics: {e}")
             return {'error': str(e)}
 
-        except Exception as e:
-            agents_out_logger.error(f"Error recommending action: {e}")
-            return "hold"
-
 # Global output handler instance
 output_handler = AgentOutputHandler()
 

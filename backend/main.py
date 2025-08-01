@@ -17,8 +17,8 @@ sys.path.append(str(Path(__file__).parent))
 
 from Gremlin_Trade_Core.agent_coordinator import AgentCoordinator
 from Gremlin_Trade_Core.Gremlin_Trader_Tools.Tool_Control_Agent.tool_control_agent import ToolControlAgent
-from Gremlin_Trade_Core.market_data_service import MarketDataService
-from Gremlin_Trade_Core.simple_market_service import SimpleMarketService
+from Gremlin_Trade_Core.Gremlin_Trader_Tools.Service_Agents.market_data_service import MarketDataService
+from Gremlin_Trade_Core.Gremlin_Trader_Tools.Service_Agents.simple_market_service import SimpleMarketService
 
 class GremlinTradingSystem:
     """

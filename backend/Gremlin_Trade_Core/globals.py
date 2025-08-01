@@ -456,6 +456,17 @@ def run_scanner(symbols: List[str], timeframe: str = "1min") -> List[Dict]:
         logger.error(f"Error running scanner: {e}")
         return []
 
+def inject_watermark(origin="unknown"):
+    """Inject watermark for tracking"""
+    try:
+        text = f"Watermark from {origin} @ {datetime.now(timezone.utc).isoformat()}"
+        vector = embed_text(text)
+        meta = {"origin": origin, "timestamp": datetime.now(timezone.utc).isoformat()}
+        return package_embedding(text, vector, meta)
+    except Exception as e:
+        logger.error(f"Error injecting watermark: {e}")
+        return None
+
 # Initialize system on import
 try:
     load_configuration()

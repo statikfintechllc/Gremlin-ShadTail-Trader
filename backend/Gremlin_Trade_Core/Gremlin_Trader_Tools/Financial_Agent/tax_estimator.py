@@ -96,3 +96,45 @@ def _persist_tax_estimate(result):
         logger.debug(f"[TAX_ESTIMATE] Persisted embedding for {result['symbol']}")
     except Exception as e:
         logger.warning(f"[TAX_ESTIMATE] Persist failed: {e}")
+
+
+class TaxEstimator:
+    """Tax Estimator Agent for trading system"""
+    
+    def __init__(self):
+        from globals import setup_module_logger
+        self.logger = setup_module_logger("financial", "tax_estimator")
+        self.name = "TaxEstimator"
+        self.initialized = True
+        
+    def initialize(self):
+        """Initialize the tax estimator"""
+        try:
+            self.logger.info("TaxEstimator initialized")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error initializing TaxEstimator: {e}")
+            return False
+    
+    def process(self, data=None):
+        """Process tax calculations"""
+        try:
+            if data:
+                if isinstance(data, list):
+                    result = estimate_tax_bulk(data)
+                else:
+                    result = estimate_tax(data)
+                self.logger.info(f"Tax estimation result: {result}")
+                return result
+            return None
+        except Exception as e:
+            self.logger.error(f"Error processing tax estimation: {e}")
+            return None
+    
+    def get_status(self):
+        """Get agent status"""
+        return {
+            "name": self.name,
+            "initialized": self.initialized,
+            "active": True
+        }
