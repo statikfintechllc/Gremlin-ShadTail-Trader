@@ -98,6 +98,9 @@ class RealMarketDataService:
             
             # Check if yfinance is available
             if not YFINANCE_AVAILABLE:
+                if os.environ.get("DISABLE_YFINANCE_FALLBACK", "0") == "1":
+                    market_logger.error(f"yfinance not available and fallback is disabled for {symbol}")
+                    raise RuntimeError("yfinance is not available and fallback is disabled (set DISABLE_YFINANCE_FALLBACK=0 to enable fallback).")
                 market_logger.warning(f"yfinance not available, using fallback data for {symbol}")
                 return self._generate_fallback_stock_data(symbol)
             
