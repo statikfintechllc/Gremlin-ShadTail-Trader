@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# For Linux users: Launch Gremlin ShadTail Trader from Dashboard
+# For Linux users: Launch Gremlin ShadTail Trader with proper backend setup
 
-# Gremlin ShadTail Trader Launcher - NO CONSTRAINTS MODE
+# Gremlin ShadTail Trader Launcher with Poetry Backend Support
 cd "$(dirname "$0")/.."  # Go to project root directory
 
 echo "🚀 Starting Gremlin ShadTail Trader..."
@@ -14,6 +14,26 @@ pkill -f "python.*server" 2>/dev/null || true
 # Export environment variables for no sandbox mode
 export ELECTRON_DISABLE_SANDBOX=1
 export DISPLAY=${DISPLAY:-:0}
+export PATH="$HOME/.local/bin:$PATH"
+
+# Ensure backend dependencies are ready
+echo "🔧 Preparing backend environment..."
+cd backend
+if [ -f "pyproject.toml" ]; then
+    if ! command -v poetry &> /dev/null; then
+        echo "⚠️ Poetry not found, please install it first"
+        echo "💡 Run: curl -sSL https://install.python-poetry.org | python3 -"
+        exit 1
+    fi
+    
+    # Configure and install dependencies if needed
+    poetry config virtualenvs.in-project true
+    if [ ! -d ".venv" ]; then
+        echo "📦 Installing backend dependencies..."
+        poetry install
+    fi
+fi
+cd ..
 
 # Function to launch development mode
 launch_dev() {

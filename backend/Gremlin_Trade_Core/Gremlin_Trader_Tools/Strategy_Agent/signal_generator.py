@@ -416,3 +416,39 @@ def get_signal_performance_metrics():
     except Exception as e:
         logger.error(f"Error getting signal performance metrics: {e}")
         return {}
+
+
+class SignalGenerator:
+    """Signal Generator Agent for trading system"""
+    
+    def __init__(self):
+        self.logger = setup_module_logger("trading_core", "signal_generator")
+        self.name = "SignalGenerator"
+        self.initialized = True
+        
+    def initialize(self):
+        """Initialize the signal generator"""
+        try:
+            self.logger.info("SignalGenerator initialized")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error initializing SignalGenerator: {e}")
+            return False
+    
+    def process(self, data=None):
+        """Process market data and generate signals"""
+        try:
+            signals = generate_signals(limit=50, embed=True)
+            self.logger.info(f"Generated {len(signals)} signals")
+            return signals
+        except Exception as e:
+            self.logger.error(f"Error processing signals: {e}")
+            return []
+    
+    def get_status(self):
+        """Get agent status"""
+        return {
+            "name": self.name,
+            "initialized": self.initialized,
+            "active": True
+        }

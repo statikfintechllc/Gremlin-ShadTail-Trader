@@ -105,3 +105,41 @@ def apply_signal_rules(stock: dict):
     except Exception as e:
         logger.error(f"[RULES] Signal rule error: {e}")
         return None
+
+
+class RulesEngine:
+    """Rules Engine Agent for trading system"""
+    
+    def __init__(self):
+        self.logger = setup_module_logger("trading_core", "rules_engine")
+        self.name = "RulesEngine"
+        self.initialized = True
+        
+    def initialize(self):
+        """Initialize the rules engine"""
+        try:
+            self.logger.info("RulesEngine initialized")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error initializing RulesEngine: {e}")
+            return False
+    
+    def process(self, data=None):
+        """Process market data using rules"""
+        try:
+            if data:
+                result = apply_signal_rules(data)
+                self.logger.info(f"Rules processing result: {result}")
+                return result
+            return None
+        except Exception as e:
+            self.logger.error(f"Error processing rules: {e}")
+            return None
+    
+    def get_status(self):
+        """Get agent status"""
+        return {
+            "name": self.name,
+            "initialized": self.initialized,
+            "active": True
+        }

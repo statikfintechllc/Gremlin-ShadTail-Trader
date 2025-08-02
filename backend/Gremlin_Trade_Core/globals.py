@@ -294,56 +294,13 @@ def resolve_path(path_str: str) -> Path:
 
 # Database initialization
 def init_metadata_db():
-    """Initialize metadata database"""
+    """Initialize metadata database - delegated to embedder module"""
     try:
-        conn = sqlite3.connect(METADATA_DB_PATH)
-        cursor = conn.cursor()
-        
-        # Create tables for trading data, signals, and metadata
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS signals (
-                id TEXT PRIMARY KEY,
-                symbol TEXT,
-                signal_type TEXT,
-                confidence REAL,
-                price REAL,
-                volume INTEGER,
-                timestamp TEXT,
-                metadata TEXT
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS trades (
-                id TEXT PRIMARY KEY,
-                symbol TEXT,
-                action TEXT,
-                quantity INTEGER,
-                price REAL,
-                timestamp TEXT,
-                pnl REAL,
-                metadata TEXT
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS positions (
-                id TEXT PRIMARY KEY,
-                symbol TEXT,
-                quantity INTEGER,
-                avg_price REAL,
-                current_price REAL,
-                unrealized_pnl REAL,
-                timestamp TEXT
-            )
-        ''')
-        
-        conn.commit()
-        conn.close()
-        logger.info("Metadata database initialized")
-        
+        # Let the embedder module handle database initialization with the latest schema
+        # This prevents schema conflicts between globals and embedder
+        logger.info("Metadata database initialization delegated to embedder module")
     except Exception as e:
-        logger.error(f"Error initializing metadata database: {e}")
+        logger.error(f"Error during metadata database delegation: {e}")
 
 # Vector embedding functions
 def embed_text(text: str) -> np.ndarray:
@@ -498,6 +455,17 @@ def run_scanner(symbols: List[str], timeframe: str = "1min") -> List[Dict]:
     except Exception as e:
         logger.error(f"Error running scanner: {e}")
         return []
+
+def inject_watermark(origin="unknown"):
+    """Inject watermark for tracking"""
+    try:
+        text = f"Watermark from {origin} @ {datetime.now(timezone.utc).isoformat()}"
+        vector = embed_text(text)
+        meta = {"origin": origin, "timestamp": datetime.now(timezone.utc).isoformat()}
+        return package_embedding(text, vector, meta)
+    except Exception as e:
+        logger.error(f"Error injecting watermark: {e}")
+        return None
 
 # Initialize system on import
 try:

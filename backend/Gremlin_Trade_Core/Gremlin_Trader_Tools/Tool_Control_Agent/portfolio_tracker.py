@@ -25,15 +25,19 @@
 import json
 from pathlib import Path
 from datetime import datetime
-from utils.logging_config import setup_module_logger
+from Gremlin_Trade_Core.globals import setup_module_logger
 
 # Initialize module-specific logger
 logger = setup_module_logger("trading_core", "portfolio_tracker")
-from memory.vector_store.embedder import embed_text, package_embedding, inject_watermark
+from Gremlin_Trade_Memory.embedder import encode, package_embedding
 import shutil
 import math
-from agent_core.task_queue import enqueue_task  # FSM/task queue hook
-from self_training.feedback_loop import tag_event  # Feedback/tagging
+# from self_training.feedback_loop import tag_event  # Disabled - module not available
+
+# Simple replacement for tag_event function
+def tag_event(event_type: str, data: dict):
+    """Simple event tagging replacement"""
+    logger.info(f"Event tagged: {event_type} - {data}")
 
 # === File Paths ===
 PORTFOLIO_FILE = Path("data/portfolio.json")
@@ -66,7 +70,7 @@ def load_portfolio():
 
 def save_portfolio(data):
     save_json(PORTFOLIO_FILE, data)
-    inject_watermark(origin=ORIGIN)
+    # inject_watermark(origin=ORIGIN)  # Disabled - function not available
     logger.info("[PORTFOLIO] Portfolio saved.")
 
 
@@ -88,7 +92,7 @@ def log_trade(symbol, action, shares, price):
     logger.info(f"[PORTFOLIO] Trade logged: {event}")
 
     summary = f"{action.upper()} {shares} {symbol} @ ${price:.2f}"
-    vector = embed_text(summary)
+    vector = encode(summary)
 
     package_embedding(
         text=summary,
@@ -96,7 +100,7 @@ def log_trade(symbol, action, shares, price):
         meta=event,
     )
 
-    inject_watermark(origin=f"{ORIGIN}::trade")
+    # inject_watermark(origin=f"{ORIGIN}::trade")  # Disabled - function not available
 
 
 # === Update Position ===
@@ -222,7 +226,7 @@ def place_order(symbol, action, shares, price, order_type="market", limit_price=
     else:
         logger.warning(f"[PORTFOLIO] Unknown order type: {order_type}")
     tag_event("trade", {"symbol": symbol, "action": action, "shares": shares, "price": price, "order_type": order_type})
-    enqueue_task({"type": "trade_event", "symbol": symbol, "action": action, "shares": shares, "price": price, "order_type": order_type})
+    # enqueue_task({"type": "trade_event", "symbol": symbol, "action": action, "shares": shares, "price": price, "order_type": order_type})  # Disabled - function not available
 
 
 # === Portfolio Analytics ===
@@ -287,6 +291,35 @@ def cli_interface():
     elif args.action == "risk":
         prices = json.loads(args.current_prices) if args.current_prices else {}
         print(json.dumps(calculate_risk_metrics(prices), indent=2))
+
+
+class PortfolioTracker:
+    """Portfolio tracking class for agent compatibility"""
+    
+    def __init__(self):
+        self.logger = logger
+        
+    async def start(self):
+        """Start the portfolio tracker"""
+        self.logger.info("Portfolio tracker started")
+        
+    async def stop(self):
+        """Stop the portfolio tracker"""
+        self.logger.info("Portfolio tracker stopped")
+        
+    def get_portfolio_summary(self, current_prices=None):
+        """Get portfolio summary"""
+        if current_prices is None:
+            current_prices = {}
+        return get_portfolio_summary(current_prices)
+        
+    def log_trade(self, symbol, action, shares, price):
+        """Log a trade"""
+        return log_trade(symbol, action, shares, price)
+        
+    def update_position(self, symbol, price, shares, action="buy"):
+        """Update a position"""
+        return update_position(symbol, price, shares, action)
 
 
 if __name__ == "__main__":

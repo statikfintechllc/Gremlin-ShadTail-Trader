@@ -193,13 +193,34 @@ elif [ ! -f "resources/icon.png" ]; then
     echo "placeholder" > resources/icon.png
 fi
 
-print_status "Building backend with Poetry dependencies..."
-npm run build:backend
+# Build the application
+print_header "Building Gremlin ShadTail Trader..."
+
+print_status "Creating professional application resources..."
+mkdir -p resources
+
+# Create professional icon if ImageMagick is available
+if command -v convert &> /dev/null && [ ! -f "resources/icon.png" ]; then
+    print_status "Generating professional application icon..."
+    convert -size 512x512 -background "#000000" -fill "#ff6b35" -pointsize 200 \
+        -gravity center label:"G" -bordercolor "#c9a96e" -border 10 resources/icon.png
+    print_success "Professional icon created with theme colors"
+elif [ ! -f "resources/icon.png" ]; then
+    print_warning "ImageMagick not available, creating placeholder icon"
+    echo "placeholder" > resources/icon.png
+fi
+
+print_status "Building backend with Poetry and proper dependencies..."
+cd backend
+export PATH="$HOME/.local/bin:$PATH"
+poetry config virtualenvs.in-project true
+poetry install
+cd ..
 
 print_status "Building frontend with theme integration..."
 npm run build:frontend
 
-print_status "Building complete application..."
+print_status "Building complete application with backend integration..."
 npm run build
 
 if [ $? -eq 0 ]; then
@@ -210,7 +231,12 @@ else
 fi
 
 print_status "Packaging desktop application..."
-npm run package:linux
+# Only package if build succeeded
+if npm run package:linux; then
+    print_success "Desktop application packaged successfully!"
+else
+    print_warning "Desktop packaging had issues, but continuing with installation..."
+fi
 
 # Setup desktop integration
 print_header "Setting up Desktop Integration..."

@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from Gremlin_Trade_Core.Gremlin_Trader_Tools.Memory_Agent.base_memory_agent import BaseMemoryAgent
-from Gremlin_Trade_Core.market_data_service import MarketDataService
+from Gremlin_Trade_Core.Gremlin_Trader_Tools.Service_Agents.market_data_service import MarketDataService
 
 class StrategyType(Enum):
     MOMENTUM = "momentum"

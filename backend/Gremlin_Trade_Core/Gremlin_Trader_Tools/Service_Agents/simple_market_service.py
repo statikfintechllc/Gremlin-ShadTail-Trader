@@ -31,6 +31,23 @@ class SimpleMarketDataService:
     def __init__(self):
         self.cache = {}
         self.cache_timeout = 60  # Cache for 60 seconds
+        self.running = False
+        
+    async def start(self):
+        """Start the market data service"""
+        try:
+            self.running = True
+            market_logger.info("SimpleMarketDataService started")
+        except Exception as e:
+            market_logger.error(f"Error starting service: {e}")
+    
+    async def stop(self):
+        """Stop the market data service"""
+        try:
+            self.running = False
+            market_logger.info("SimpleMarketDataService stopped")
+        except Exception as e:
+            market_logger.error(f"Error stopping service: {e}")
         
     async def get_live_penny_stocks(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Get live penny stock data using multiple sources"""
@@ -211,6 +228,9 @@ class SimpleMarketDataService:
 
 # Global instance
 simple_market_service = SimpleMarketDataService()
+
+# Alias for backward compatibility
+SimpleMarketService = SimpleMarketDataService
 
 # Convenience functions for backward compatibility
 async def get_live_penny_stocks_real(limit: int = 50) -> List[Dict[str, Any]]:

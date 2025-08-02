@@ -3,10 +3,11 @@ import { logger } from '../utils/logger';
 import GrokChat from './GrokChat';
 import SourceEditor from './SourceEditor';
 import SettingsComponent from './Settings';
+import EnhancedAgentDashboard from './EnhancedAgentDashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { MessageCircle, Code, TrendingUp, Settings, Users, BarChart3, Activity, DollarSign, Zap, Target } from 'lucide-react';
+import { MessageCircle, Code, TrendingUp, Settings, Users, BarChart3, Activity, DollarSign, Zap, Target, Bell, Shield } from 'lucide-react';
 
 interface AgentStatus {
   trading_agents: {
@@ -1490,7 +1491,7 @@ const Dashboard: React.FC = () => {
           </TabsContent>
           
           <TabsContent value="agents" className="h-full m-0 overflow-auto">
-            {renderAgentsTab()}
+            <EnhancedAgentDashboard />
           </TabsContent>
           
           <TabsContent value="settings" className="h-full m-0 overflow-auto">
