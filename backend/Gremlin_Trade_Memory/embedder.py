@@ -125,33 +125,59 @@ def dummy_encode(text):
     np.random.seed(hash_val)
     return np.random.rand(dimension).astype(np.float32)
 
-def flatten_metadata(metadata: Dict[str, Any], prefix: str = "", max_depth: int = 3) -> Dict[str, Any]:
+def flatten_metadata(metadata: Dict[str, Any], prefix: str = "", max_depth: int = 3, max_keys: int = 1000) -> Dict[str, Any]:
     """
     Flatten nested metadata for ChromaDB compatibility.
     ChromaDB only accepts str, int, float, bool, or None values.
+    Limits the total number of keys to prevent excessive memory usage.
     """
     flattened = {}
-    
+    key_count = [0]  # Use a list to allow modification in nested scope
+    limit_reached = [False]
+
     def _flatten_recursive(obj, current_prefix, depth):
+        if limit_reached[0]:
+            return
         if depth > max_depth:
             # Convert to string if too deep
-            flattened[current_prefix.rstrip('_')] = str(obj)
+            if key_count[0] < max_keys:
+                flattened[current_prefix.rstrip('_')] = str(obj)
+                key_count[0] += 1
+            else:
+                limit_reached[0] = True
+                embedder_logger.warning(f"flatten_metadata: Maximum number of keys ({max_keys}) reached. Truncating metadata flattening.")
             return
-            
+
         if isinstance(obj, dict):
             for key, value in obj.items():
+                if limit_reached[0]:
+                    break
                 new_key = f"{current_prefix}{key}" if current_prefix else key
                 _flatten_recursive(value, f"{new_key}_", depth + 1)
         elif isinstance(obj, (list, tuple)):
             # Convert arrays to string representation for ChromaDB
-            flattened[current_prefix.rstrip('_')] = str(obj)
+            if key_count[0] < max_keys:
+                flattened[current_prefix.rstrip('_')] = str(obj)
+                key_count[0] += 1
+            else:
+                limit_reached[0] = True
+                embedder_logger.warning(f"flatten_metadata: Maximum number of keys ({max_keys}) reached. Truncating metadata flattening.")
         elif isinstance(obj, (str, int, float, bool)) or obj is None:
             # Direct supported types
-            flattened[current_prefix.rstrip('_')] = obj
+            if key_count[0] < max_keys:
+                flattened[current_prefix.rstrip('_')] = obj
+                key_count[0] += 1
+            else:
+                limit_reached[0] = True
+                embedder_logger.warning(f"flatten_metadata: Maximum number of keys ({max_keys}) reached. Truncating metadata flattening.")
         else:
             # Convert other types to string
-            flattened[current_prefix.rstrip('_')] = str(obj)
-    
+            if key_count[0] < max_keys:
+                flattened[current_prefix.rstrip('_')] = str(obj)
+                key_count[0] += 1
+            else:
+                limit_reached[0] = True
+                embedder_logger.warning(f"flatten_metadata: Maximum number of keys ({max_keys}) reached. Truncating metadata flattening.")
     _flatten_recursive(metadata, prefix, 0)
     return flattened
 
