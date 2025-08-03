@@ -112,7 +112,8 @@ CONCURRENT_AGENTS=5           # Max concurrent agent operations
 ```bash
 # Install with wget
 wget -qO- https://raw.githubusercontent.com/statikfintechllc/Gremlin-ShadTail-Trader/master/scripts/install-all | bash
-
+```
+```bash
 # Or with curl
 curl -fsSL https://raw.githubusercontent.com/statikfintechllc/Gremlin-ShadTail-Trader/master/scripts/install-all | bash
 ```
