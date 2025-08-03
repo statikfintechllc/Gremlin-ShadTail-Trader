@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# install-all script for Gremlin ShadTail Trader
-# Complete one-script installation for the entire system
-
 # ===================================
 # WGET REMOTE INSTALLATION SECTION
 # ===================================
@@ -10,22 +7,24 @@
 # Usage: wget -qO- https://raw.githubusercontent.com/statikfintechllc/Gremlin-ShadTail-Trader/master/scripts/install-all | bash
 # OR: curl -fsSL https://raw.githubusercontent.com/statikfintechllc/Gremlin-ShadTail-Trader/master/scripts/install-all | bash
 
-# Check if we're running from a wget/curl pipe (no script file exists)
 if [[ ! -f "$0" || "$0" == "bash" || "$0" == "/dev/fd/63" ]]; then
     REMOTE_INSTALL=true
-    echo "🌐 Remote installation detected - will clone repository to $HOME"
-    
+    REPO_DIR="$HOME/Gremlin-ShadTail-Trader"
+    echo "🌐 Remote installation detected - will clone repository to $REPO_DIR"
+
     # Clone the repository if not already present
-    if [[ ! -d ".git" ]]; then
+    if [[ ! -d "$REPO_DIR/.git" ]]; then
         echo "📥 Cloning Gremlin ShadTail Trader repository..."
-        git clone https://github.com/statikfintechllc/Gremlin-ShadTail-Trader.git .
+        git clone https://github.com/statikfintechllc/Gremlin-ShadTail-Trader.git "$REPO_DIR"
     else
         echo "🔄 Updating existing repository..."
+        cd "$REPO_DIR"
         git pull origin master
     fi
-    
+
     # Execute the local install script
     echo "🚀 Starting local installation..."
+    cd "$REPO_DIR"
     chmod +x scripts/install-all
     exec ./scripts/install-all "$@"
     exit $?
