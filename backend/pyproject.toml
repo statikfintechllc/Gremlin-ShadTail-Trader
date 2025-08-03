@@ -59,8 +59,3 @@ ccxt = "^4.4.96"
 python-telegram-bot = "^22.3"
 pyinstaller = "^6.14.2"
 psutil = "^5.9.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
