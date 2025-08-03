@@ -21,6 +21,67 @@ Gremlin ShadTail Trader combines modern web technologies with powerful backend p
 - **🏃 High-Performance Backend** - FastAPI-powered REST API with WebSocket support
 - **🧠 Vector Memory System** - Advanced memory management for trading strategies
 
+## 🤖 The 15 Trading Agents
+
+Gremlin ShadTail Trader features a comprehensive suite of 15 specialized AI trading agents, each designed for specific aspects of trading operations:
+
+### Core Intelligence Agents
+1. **Financial Agent** (`Financial_Agent/`) - Market data analysis, fundamental research, and financial modeling
+2. **Strategy Agent** (`Strategy_Agent/`) - Trading strategy development, optimization, and backtesting
+3. **Memory Agent** (`Memory_Agent/`) - Vector-based pattern recognition, historical analysis, and context retention
+4. **Timing Agent** (`Timing_Agent/`) - Market timing analysis, entry/exit point optimization, and cycle detection
+
+### Execution & Control Agents
+5. **Trade Execution Agent** (`Trade_Agents/execution/`) - Order management, trade routing, and execution optimization
+6. **Risk Management Agent** (`Trade_Agents/risk/`) - Portfolio risk assessment, position sizing, and drawdown control
+7. **Portfolio Agent** (`Trade_Agents/portfolio/`) - Asset allocation, rebalancing, and portfolio optimization
+8. **Tool Control Agent** (`Tool_Control_Agent/`) - System automation, tool orchestration, and workflow management
+
+### Specialized Analysis Agents
+9. **Technical Analysis Agent** (`Trade_Agents/technical/`) - Chart pattern recognition, indicator analysis, and signal generation
+10. **Sentiment Analysis Agent** (`Trade_Agents/sentiment/`) - News sentiment, social media analysis, and market psychology
+11. **Options Agent** (`Trade_Agents/options/`) - Options strategies, volatility analysis, and derivatives trading
+12. **Crypto Agent** (`Trade_Agents/crypto/`) - Cryptocurrency market specialization and DeFi integration
+
+### System & Support Agents
+13. **Service Agent** (`Service_Agents/`) - External service integration, API management, and data pipeline coordination
+14. **Runtime Agent** (`Run_Time_Agent/`) - System performance monitoring, resource management, and optimization
+15. **Agent Coordinator** (`agent_coordinator.py`) - Central coordination, inter-agent communication, and workflow orchestration
+
+### Agent Configuration
+
+Each agent can be configured via:
+- **Individual config files**: `backend/Gremlin_Trade_Core/config/Gremlin_Trade_Config/`
+- **Global settings**: `backend/Gremlin_Trade_Core/config/FullSpec.config`
+- **Environment variables**: Set via `.env` files or system environment
+- **Runtime parameters**: Adjustable through the web interface
+
+**Environment Variables for Agents:**
+```bash
+# Core Agent Settings
+TRADING_MODE=live              # live, paper, backtest
+AGENT_LOG_LEVEL=INFO          # DEBUG, INFO, WARNING, ERROR
+MEMORY_STORAGE_PATH=./memory  # Vector memory storage location
+STRATEGY_AUTO_EXECUTE=false   # Auto-execute strategy signals
+
+# External API Configuration
+ALPHA_VANTAGE_API_KEY=your_key
+POLYGON_API_KEY=your_key
+IEX_CLOUD_API_KEY=your_key
+BINANCE_API_KEY=your_key
+BINANCE_SECRET_KEY=your_secret
+
+# Risk Management
+MAX_POSITION_SIZE=0.05        # 5% max position size
+STOP_LOSS_PERCENTAGE=0.02     # 2% stop loss
+DAILY_LOSS_LIMIT=0.10         # 10% daily loss limit
+
+# Agent Performance
+AGENT_TIMEOUT_SECONDS=30      # Agent operation timeout
+MEMORY_RETENTION_DAYS=365     # How long to retain memory
+CONCURRENT_AGENTS=5           # Max concurrent agent operations
+```
+
 ![Gremlin ShadTail Trader - Source Editor](https://github.com/user-attachments/assets/17561fc2-57d0-49a7-8c59-b1288772e099)
 
 ![Gremlin ShadTail Trader - Settings](https://github.com/user-attachments/assets/8f4603e6-fc5d-407e-adec-d1537b124d0c)
@@ -45,6 +106,26 @@ Gremlin ShadTail Trader combines modern web technologies with powerful backend p
 - **Tailscale** (Optional) - [Download here](https://tailscale.com/download)
 
 ### Quick Start with Enhanced Installer
+
+**🚀 One-Line Installation (Recommended)**
+
+```bash
+# Install with wget
+wget -qO- https://raw.githubusercontent.com/statikfintechllc/Gremlin-ShadTail-Trader/master/scripts/install-all | bash
+
+# Or with curl
+curl -fsSL https://raw.githubusercontent.com/statikfintechllc/Gremlin-ShadTail-Trader/master/scripts/install-all | bash
+```
+
+This one-line installer will:
+- Automatically clone the repository to `~/gremlin-shadtail-trader`
+- Install all system dependencies (Node.js, Python, Poetry, TA-Lib, etc.)
+- Set up Tailscale for secure remote access
+- Configure all 15 trading agents
+- Build and configure the desktop application
+- Set up the complete development environment
+
+**Manual Installation**
 
 1. **Clone the repository**
    ```bash

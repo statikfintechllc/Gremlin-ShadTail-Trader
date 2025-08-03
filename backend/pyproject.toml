@@ -1,3 +1,15 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Gremlin ShadTail Trader Backend API"
+authors = [{name = "Gremlin Team", email = "dev@gremlin.trading"}]
+requires-python = ">=3.11,<3.14"
+dynamic = ["version"]
+
 [tool.poetry]
 name = "backend"
 version = "0.1.0"

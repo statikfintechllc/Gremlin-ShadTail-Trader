@@ -3,6 +3,42 @@
 # install-all script for Gremlin ShadTail Trader
 # Complete one-script installation for the entire system
 
+# ===================================
+# WGET REMOTE INSTALLATION SECTION
+# ===================================
+# This allows the script to be downloaded and run directly from GitHub
+# Usage: wget -qO- https://raw.githubusercontent.com/statikfintechllc/Gremlin-ShadTail-Trader/master/scripts/install-all | bash
+# OR: curl -fsSL https://raw.githubusercontent.com/statikfintechllc/Gremlin-ShadTail-Trader/master/scripts/install-all | bash
+
+# Check if we're running from a wget/curl pipe (no script file exists)
+if [[ ! -f "$0" || "$0" == "bash" || "$0" == "/dev/fd/63" ]]; then
+    REMOTE_INSTALL=true
+    INSTALL_DIR="$HOME/gremlin-shadtail-trader"
+    echo "🌐 Remote installation detected - will clone repository to $INSTALL_DIR"
+    
+    # Create installation directory
+    mkdir -p "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
+    
+    # Clone the repository if not already present
+    if [[ ! -d ".git" ]]; then
+        echo "📥 Cloning Gremlin ShadTail Trader repository..."
+        git clone https://github.com/statikfintechllc/Gremlin-ShadTail-Trader.git .
+    else
+        echo "🔄 Updating existing repository..."
+        git pull origin master
+    fi
+    
+    # Execute the local install script
+    echo "🚀 Starting local installation..."
+    chmod +x scripts/install-all
+    exec ./scripts/install-all "$@"
+    exit $?
+else
+    REMOTE_INSTALL=false
+    echo "📁 Local installation detected"
+fi
+
 set -e  # Exit on any error
 
 echo "🚀 Gremlin ShadTail Trader - Complete System Installation"
@@ -151,17 +187,20 @@ cd ..
 print_status "Installing backend Python dependencies..."
 cd backend
 
+# Fix Poetry lock file issue
+print_status "Configuring Poetry environment..."
+export PATH="$HOME/.local/bin:$PATH"
+poetry config virtualenvs.in-project true
+
+# Check if lock file is outdated and regenerate if needed
+if ! poetry check; then
+    print_warning "Poetry lock file is outdated, regenerating..."
+    poetry lock
+fi
+
 # Ensure Poetry uses the correct Python version and install dependencies
 poetry env use python3
 poetry install --no-root
-
-# Install additional required packages for trading system
-print_status "Installing trading system dependencies..."
-poetry add numpy pandas fastapi uvicorn chromadb sentence-transformers \
-    yfinance pillow requests aiohttp asyncio-mqtt websockets \
-    python-multipart jinja2 pydantic-settings python-dotenv \
-    schedule apscheduler python-jose cryptography passlib bcrypt \
-    python-binance ccxt websocket-client python-telegram-bot
 
 cd ..
 
