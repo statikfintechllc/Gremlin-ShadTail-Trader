@@ -13,12 +13,7 @@
 # Check if we're running from a wget/curl pipe (no script file exists)
 if [[ ! -f "$0" || "$0" == "bash" || "$0" == "/dev/fd/63" ]]; then
     REMOTE_INSTALL=true
-    INSTALL_DIR="$HOME"
     echo "🌐 Remote installation detected - will clone repository to $INSTALL_DIR"
-    
-    # Create installation directory
-    mkdir -p "$INSTALL_DIR"
-    cd "$INSTALL_DIR"
     
     # Clone the repository if not already present
     if [[ ! -d ".git" ]]; then
