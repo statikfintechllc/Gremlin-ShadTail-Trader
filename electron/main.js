@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -394,8 +394,41 @@ app.whenReady().then(async () => {
     console.log('Backend is ready, creating window...');
     createWindow();
   } else {
-    console.error('Backend failed to start - creating window anyway with error handling');
-    createWindow();
+    console.error('Backend failed to start within timeout');
+    
+    // Show error dialog with options to retry or exit
+    const result = await dialog.showMessageBox({
+      type: 'error',
+      title: 'Backend Connection Error',
+      message: 'Failed to connect to the backend server',
+      detail: 'The trading backend failed to start or is not responding. You can retry to wait longer, or exit the application.',
+      buttons: ['Retry', 'Continue Anyway', 'Exit'],
+      defaultId: 0,
+      cancelId: 2
+    });
+    
+    if (result.response === 0) {
+      // Retry - wait for backend again
+      console.log('User chose to retry backend connection...');
+      const retryReady = await waitForBackend(60, 2000); // Wait longer with more attempts
+      if (retryReady) {
+        console.log('Backend is ready after retry, creating window...');
+        createWindow();
+      } else {
+        console.error('Backend still not ready after retry, exiting...');
+        app.quit();
+        return;
+      }
+    } else if (result.response === 1) {
+      // Continue anyway - create window without backend
+      console.log('User chose to continue without backend connection...');
+      createWindow();
+    } else {
+      // Exit
+      console.log('User chose to exit due to backend connection failure');
+      app.quit();
+      return;
+    }
   }
 
   app.on('activate', () => {
