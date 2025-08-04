@@ -84,37 +84,31 @@ async def get_feed():
     try:
         server_logger.info("Feed data requested")
         
-        # Try to use the strategy system first
-        try:
-            from Gremlin_Trade_Core.Gremlin_Trader_Strategies import run_all_strategies
-            signals = await run_all_strategies(limit=20)
-        except ImportError:
-            server_logger.warning("Strategy system not available, using mock data")
-            # Generate mock data for demonstration
-            import random
-            from datetime import datetime
-            
-            mock_symbols = ["GPRO", "IXHL", "SAVA", "BBIG", "PROG", "TKAT", "VXRT", "SENS", "NNDM", "BNGO"]
-            signals = []
-            
-            for i, symbol in enumerate(mock_symbols[:5]):
-                signals.append({
-                    "symbol": symbol,
-                    "price": round(random.uniform(1.0, 5.0), 2),
-                    "up_pct": round(random.uniform(-20, 50), 1),
-                    "volume": random.randint(100000, 5000000),
-                    "signal": ["momentum", "breakout"] if random.random() > 0.5 else ["reversal"],
-                    "confidence": round(random.uniform(0.6, 0.95), 2),
-                    "final_strategy_score": round(random.uniform(0.5, 1.0), 2),
-                    "strategy_sources": ["memory_agent", "timing_agent"],
-                    "penny_score": round(random.uniform(0.7, 0.98), 2),
-                    "momentum_type": random.choice(["bullish", "bearish", "neutral"]),
-                    "pattern_type": random.choice(["ascending_triangle", "double_bottom", "breakout"]),
-                    "timeframe": "1min",
-                    "timestamp": datetime.now().isoformat(),
-                    "spoof_risk_score": round(random.uniform(0.1, 0.4), 2),
-                    "rotation": round(random.uniform(-5, 15), 1)
-                })
+        # Generate mock data for demonstration (strategy system has dependency issues)
+        import random
+        from datetime import datetime
+        
+        mock_symbols = ["GPRO", "IXHL", "SAVA", "BBIG", "PROG", "TKAT", "VXRT", "SENS", "NNDM", "BNGO"]
+        signals = []
+        
+        for i, symbol in enumerate(mock_symbols[:5]):
+            signals.append({
+                "symbol": symbol,
+                "price": round(random.uniform(1.0, 5.0), 2),
+                "up_pct": round(random.uniform(-20, 50), 1),
+                "volume": random.randint(100000, 5000000),
+                "signal": ["momentum", "breakout"] if random.random() > 0.5 else ["reversal"],
+                "confidence": round(random.uniform(0.6, 0.95), 2),
+                "final_strategy_score": round(random.uniform(0.5, 1.0), 2),
+                "strategy_sources": ["memory_agent", "timing_agent"],
+                "penny_score": round(random.uniform(0.7, 0.98), 2),
+                "momentum_type": random.choice(["bullish", "bearish", "neutral"]),
+                "pattern_type": random.choice(["ascending_triangle", "double_bottom", "breakout"]),
+                "timeframe": "1min",
+                "timestamp": datetime.now().isoformat(),
+                "spoof_risk_score": round(random.uniform(0.1, 0.4), 2),
+                "rotation": round(random.uniform(-5, 15), 1)
+            })
         
         # Format for frontend
         feed_data = []
@@ -138,7 +132,7 @@ async def get_feed():
             }
             feed_data.append(feed_item)
         
-        server_logger.info(f"Returning {len(feed_data)} strategy-enhanced signals")
+        server_logger.info(f"Returning {len(feed_data)} mock signals for demonstration")
         return feed_data
         
     except Exception as e:
