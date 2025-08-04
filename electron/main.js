@@ -336,6 +336,32 @@ function loadFullSpecConfig() {
   return null;
 }
 
+// Add function to wait for backend to be ready
+async function waitForBackend(maxAttempts = 30, delayMs = 1000) {
+  console.log('Waiting for backend to be ready...');
+  
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const response = await fetch('http://localhost:8000/health');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'healthy') {
+          console.log(`Backend is ready after ${i + 1} attempts`);
+          return true;
+        }
+      }
+    } catch (error) {
+      // Backend not ready yet
+    }
+    
+    console.log(`Backend check ${i + 1}/${maxAttempts}...`);
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+  
+  console.error('Backend failed to start within timeout');
+  return false;
+}
+
 // App event handlers
 app.whenReady().then(async () => {
   // Check Tailscale status first
@@ -359,16 +385,17 @@ app.whenReady().then(async () => {
   // Start frontend dev server if in development
   if (isDev) {
     startFrontend();
-    
-    // Wait for servers to start before creating window
-    setTimeout(() => {
-      createWindow();
-    }, 3000);
+  }
+  
+  // Wait for backend to be fully ready before creating window
+  const backendReady = await waitForBackend();
+  
+  if (backendReady) {
+    console.log('Backend is ready, creating window...');
+    createWindow();
   } else {
-    // In production, create window immediately
-    setTimeout(() => {
-      createWindow();
-    }, 2000);
+    console.error('Backend failed to start - creating window anyway with error handling');
+    createWindow();
   }
 
   app.on('activate', () => {
