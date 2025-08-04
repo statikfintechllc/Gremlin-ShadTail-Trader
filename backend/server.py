@@ -10,11 +10,8 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 
 # Add project root to path for imports
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-# Define project root for source editor (use parent directory of backend)
-SOURCE_BASE_DIR = Path(__file__).parent.parent
 
 # Import from local modules
 from Gremlin_Trade_Core.globals import (
@@ -84,31 +81,11 @@ async def get_feed():
     try:
         server_logger.info("Feed data requested")
         
-        # Generate mock data for demonstration (strategy system has dependency issues)
-        import random
-        from datetime import datetime
+        # Use the new strategy manager for comprehensive scanning
+        from Gremlin_Trade_Core.Gremlin_Trader_Strategies import run_all_strategies
         
-        mock_symbols = ["GPRO", "IXHL", "SAVA", "BBIG", "PROG", "TKAT", "VXRT", "SENS", "NNDM", "BNGO"]
-        signals = []
-        
-        for i, symbol in enumerate(mock_symbols[:5]):
-            signals.append({
-                "symbol": symbol,
-                "price": round(random.uniform(1.0, 5.0), 2),
-                "up_pct": round(random.uniform(-20, 50), 1),
-                "volume": random.randint(100000, 5000000),
-                "signal": ["momentum", "breakout"] if random.random() > 0.5 else ["reversal"],
-                "confidence": round(random.uniform(0.6, 0.95), 2),
-                "final_strategy_score": round(random.uniform(0.5, 1.0), 2),
-                "strategy_sources": ["memory_agent", "timing_agent"],
-                "penny_score": round(random.uniform(0.7, 0.98), 2),
-                "momentum_type": random.choice(["bullish", "bearish", "neutral"]),
-                "pattern_type": random.choice(["ascending_triangle", "double_bottom", "breakout"]),
-                "timeframe": "1min",
-                "timestamp": datetime.now().isoformat(),
-                "spoof_risk_score": round(random.uniform(0.1, 0.4), 2),
-                "rotation": round(random.uniform(-5, 15), 1)
-            })
+        # Run all strategies to generate signals
+        signals = await run_all_strategies(limit=20)
         
         # Format for frontend
         feed_data = []
@@ -132,12 +109,12 @@ async def get_feed():
             }
             feed_data.append(feed_item)
         
-        server_logger.info(f"Returning {len(feed_data)} mock signals for demonstration")
+        server_logger.info(f"Returning {len(feed_data)} strategy-enhanced signals")
         return feed_data
         
     except Exception as e:
         server_logger.error(f"Error getting feed data: {e}")
-        # Final fallback
+        # Fallback to basic data
         return [{"symbol":"GPRO","price":2.15,"up_pct":112.0,"error": "Strategy system failed"}]
 
 @app.post("/api/scan")
@@ -479,7 +456,7 @@ async def get_file_tree():
             
             return items
         
-        file_tree = build_tree(SOURCE_BASE_DIR)
+        file_tree = build_tree(BASE_DIR)
         return {"files": file_tree}
         
     except Exception as e:
@@ -490,11 +467,11 @@ async def get_file_tree():
 async def get_file_content(path: str):
     """Get content of a specific file"""
     try:
-        file_path = SOURCE_BASE_DIR / path
+        file_path = BASE_DIR / path
         
         # Security check - ensure path is within project
         try:
-            file_path.resolve().relative_to(SOURCE_BASE_DIR.resolve())
+            file_path.resolve().relative_to(BASE_DIR.resolve())
         except ValueError:
             raise HTTPException(status_code=403, detail="Access denied")
         
@@ -522,11 +499,11 @@ async def get_file_content(path: str):
 async def save_file_content(request: SourceFileRequest):
     """Save content to a file"""
     try:
-        file_path = SOURCE_BASE_DIR / request.path
+        file_path = BASE_DIR / request.path
         
         # Security check - ensure path is within project
         try:
-            file_path.resolve().relative_to(SOURCE_BASE_DIR.resolve())
+            file_path.resolve().relative_to(BASE_DIR.resolve())
         except ValueError:
             raise HTTPException(status_code=403, detail="Access denied")
         
