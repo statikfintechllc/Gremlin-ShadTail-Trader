@@ -473,6 +473,34 @@ const Dashboard: React.FC = () => {
   const [isClient, setIsClient] = useState(false);
 
   const API_BASE = 'http://localhost:8000/api';
+  const [connectionRetries, setConnectionRetries] = useState(0);
+  const MAX_RETRIES = 5;
+
+  // Function to test backend connectivity with retry logic
+  const testBackendConnection = async (retryCount = 0): Promise<boolean> => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const response = await fetch('http://localhost:8000/health', { 
+        method: 'GET',
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const data = await response.json();
+        return data.status === 'healthy';
+      }
+      return false;
+    } catch (error) {
+      if (retryCount < MAX_RETRIES - 1) {
+        console.log(`Backend connection attempt ${retryCount + 1}/${MAX_RETRIES + 1} failed, retrying...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return testBackendConnection(retryCount + 1);
+      }
+      console.error('Backend connection failed after max retries:', error);
+      return false;
+    }
+  };
 
   useEffect(() => {
     setIsClient(true);
@@ -480,6 +508,12 @@ const Dashboard: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
+        
+        // First test backend connectivity
+        const isBackendHealthy = await testBackendConnection();
+        if (!isBackendHealthy) {
+          throw new Error('Backend server is not responding. Please ensure the backend is running.');
+        }
         
         // Always use real agent data from /api/feed (agent-generated signals)
         const feedResponse = await fetch(`${API_BASE}/feed`);

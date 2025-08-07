@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const { spawn, exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -336,6 +336,32 @@ function loadFullSpecConfig() {
   return null;
 }
 
+// Add function to wait for backend to be ready
+async function waitForBackend(maxAttempts = 30, delayMs = 1000) {
+  console.log('Waiting for backend to be ready...');
+  
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const response = await fetch('http://localhost:8000/health');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'healthy') {
+          console.log(`Backend is ready after ${i + 1} attempts`);
+          return true;
+        }
+      }
+    } catch (error) {
+      // Backend not ready yet
+    }
+    
+    console.log(`Backend check ${i + 1}/${maxAttempts}...`);
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+  
+  console.error('Backend failed to start within timeout');
+  return false;
+}
+
 // App event handlers
 app.whenReady().then(async () => {
   // Check Tailscale status first
@@ -359,16 +385,50 @@ app.whenReady().then(async () => {
   // Start frontend dev server if in development
   if (isDev) {
     startFrontend();
-    
-    // Wait for servers to start before creating window
-    setTimeout(() => {
-      createWindow();
-    }, 3000);
+  }
+  
+  // Wait for backend to be fully ready before creating window
+  const backendReady = await waitForBackend();
+  
+  if (backendReady) {
+    console.log('Backend is ready, creating window...');
+    createWindow();
   } else {
-    // In production, create window immediately
-    setTimeout(() => {
+    console.error('Backend failed to start within timeout');
+    
+    // Show error dialog with options to retry or exit
+    const result = await dialog.showMessageBox({
+      type: 'error',
+      title: 'Backend Connection Error',
+      message: 'Failed to connect to the backend server',
+      detail: 'The trading backend failed to start or is not responding. You can retry to wait longer, or exit the application.',
+      buttons: ['Retry', 'Continue Anyway', 'Exit'],
+      defaultId: 0,
+      cancelId: 2
+    });
+    
+    if (result.response === 0) {
+      // Retry - wait for backend again
+      console.log('User chose to retry backend connection...');
+      const retryReady = await waitForBackend(60, 2000); // Wait longer with more attempts
+      if (retryReady) {
+        console.log('Backend is ready after retry, creating window...');
+        createWindow();
+      } else {
+        console.error('Backend still not ready after retry, exiting...');
+        app.quit();
+        return;
+      }
+    } else if (result.response === 1) {
+      // Continue anyway - create window without backend
+      console.log('User chose to continue without backend connection...');
       createWindow();
-    }, 2000);
+    } else {
+      // Exit
+      console.log('User chose to exit due to backend connection failure');
+      app.quit();
+      return;
+    }
   }
 
   app.on('activate', () => {
