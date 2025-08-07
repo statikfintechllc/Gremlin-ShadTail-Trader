@@ -253,12 +253,134 @@ Similarity Search → Learning Feedback → Performance Improvement
 
 ## Configuration Structure
 
-### Key Configuration Files
-- `backend/Gremlin_Trade_Core/config/FullSpec.config` - Main system config
-- `backend/Gremlin_Trade_Core/config/Gremlin_Trade_Config/memory.json` - Memory settings
-- `backend/Gremlin_Trade_Core/config/Gremlin_Trade_Config/trade_agents.config` - Agent config
-- `backend/pyproject.toml` - Python dependencies
-- `frontend/package.json` - Frontend dependencies
+### Backend Configurations
+
+#### Core Config Directory: `backend/Gremlin_Trade_Core/config/Gremlin_Trade_Config/`
+
+**🚨 CRITICAL: Never rename, move, or auto-modify any file in this directory**
+
+- **`memory.json`**
+  - **Purpose**: Memory system and embedding agent configuration
+  - **Used by**: `base_memory_agent.py`, `embedder.py`
+  - **Required for**: Correct initialization of backend memory agent and vector store
+  - **Breakage Impact**: Memory system fails to initialize, no agent learning possible
+
+- **`trade_agents.config`**
+  - **Purpose**: Global agent registration and activation
+  - **Used by**: All primary trade agents (`IBKR-API.trader.py`, `Kalshi-API.trader.py`), agent coordinator
+  - **Required for**: Agent orchestration and agent boot
+  - **Breakage Impact**: Agents fail to register, system cannot coordinate trading decisions
+
+- **`trade_strategy.config`**
+  - **Purpose**: Strategy mapping, weighting, and selector logic
+  - **Used by**: `strategy_agent.py`, `strategy_manager.py`
+  - **Required for**: Boot, live selection, and management of trading strategies
+  - **Breakage Impact**: No trading strategies available, system cannot generate signals
+
+#### Logging Directory: `backend/Gremlin_Trade_Core/config/Gremlin_Trade_Logs/`
+
+**🚨 CRITICAL: Never rename, move, or auto-modify any file in this directory**
+
+- **`Agents.out`**
+  - **Purpose**: Live agent logs and health/status events
+  - **Used by**: All agents, backend log aggregator
+  - **Required for**: Traceability, debugging, IPC/health checks
+  - **Breakage Impact**: No agent health monitoring, debugging becomes impossible
+
+#### Root Config Directory: `backend/Gremlin_Trade_Core/config/`
+
+- **`Agent_in.py`**
+  - **Purpose**: Dynamic agent configuration at runtime
+  - **Used by**: Agent bootstrap/coordination
+  - **Required for**: On-the-fly config changes, agent injection
+  - **Breakage Impact**: Cannot modify agent behavior without restart
+
+- **`FullSpec.config`**
+  - **Purpose**: Full system config for all agent classes and global orchestrators
+  - **Used by**: `agent_coordinator.py`, global init
+  - **Required for**: End-to-end orchestration, agent compatibility
+  - **Breakage Impact**: System cannot start, no agent coordination possible
+
+### Backend Memory/Vector Store
+
+#### Memory Directory: `backend/Gremlin_Trade_Memory/vector_store/`
+
+**🚨 CRITICAL: Never rename, move, or auto-modify any file in this directory**
+
+- **`chroma.sqlite3`**
+  - **Purpose**: Vector DB for embeddings and fast memory lookup
+  - **Used by**: `embedder.py`, memory agent, backend recall
+  - **Breakage Impact**: Complete loss of agent learning and memory
+
+- **`metadata.db`**
+  - **Purpose**: Metadata and tracking for vector/embedding states
+  - **Used by**: `embedder.py`, agents needing persistent reference/state
+  - **Breakage Impact**: Memory system corrupted, embeddings become unreliable
+
+- **`git.keep`**
+  - **Purpose**: Directory presence only; not a config file
+  - **Note**: Ensures directory exists in git, safe to ignore
+
+### Frontend Configurations
+
+#### Core Frontend Config Files
+
+- **`frontend/env.d.ts`**
+  - **Purpose**: Typed environment variable mapping for Astro/TSX components
+  - **Used by**: Frontend agent manager, state display, backend connection strings
+  - **Required for**: Type safety and environment configuration
+
+- **`frontend/astro.config.mjs`**
+  - **Purpose**: Astro build and runtime config, routes, integration points
+  - **Used by**: Astro/TSX, build scripts, static asset logic
+  - **Required for**: Frontend build process and routing
+
+- **`frontend/shadcn.config.js`**
+  - **Purpose**: ShadCN UI library configuration (design system, themes)
+  - **Used by**: Astro UI rendering, TSX components
+  - **Required for**: Consistent UI theming and component styling
+
+- **`frontend/tailwind.config.cjs`**
+  - **Purpose**: TailwindCSS config for global styles/themes
+  - **Used by**: All frontend components/pages
+  - **Required for**: CSS styling and responsive design
+
+#### Other Frontend Dependencies
+- **`package.json`**, **`package-lock.json`** - Dependency and script management
+- **`bin/`** - Go/utility binaries (not configs)
+
+### Configuration Startup Order
+
+#### Boot-Critical Configs (Required First)
+1. **`FullSpec.config`** - Must load before any agent initialization
+2. **`memory.json`** - Required for memory system before agents start
+3. **`trade_agents.config`** - Needed for agent registration process
+
+#### Runtime-Loaded Configs
+- **`trade_strategy.config`** - Loaded during strategy initialization
+- **`Agent_in.py`** - Dynamic loading during runtime
+- **`Agents.out`** - Created/appended during operation
+
+#### Static Configs (Never Reloaded)
+- **Vector store files** (`chroma.sqlite3`, `metadata.db`) - Persistent storage
+- **Frontend configs** - Build-time only, require restart to change
+
+### 🚨 CRITICAL Configuration Rules
+
+#### Absolute Path Dependencies
+- **All config files are referenced by absolute paths** in agents, orchestrators, and memory agents
+- **Never relocate** or rename config files without updating all references
+- **Config structure changes** require system-wide testing and validation
+
+#### Error Handling Requirements
+- **If a config is missing**: Fail gracefully and emit descriptive error
+- **Never hard-crash** the system due to config issues
+- **Never drop agent/IPC health signals** due to config problems
+- **Maintain system stability** even with malformed configs
+
+#### Development vs Production
+- **Development**: Config validation warnings, detailed error messages
+- **Production**: Graceful degradation, minimal error exposure, backup configs
 
 ### Environment Configuration
 - **Development**: Poetry + Astro dev server + Paper trading
@@ -333,6 +455,10 @@ npm run dev  # Runs all components
 - **Break IPC communication** between Electron and backend
 - **Modify orchestration logic** without full system understanding
 - **Delete configuration files** or change their structure
+- **Rename, move, or auto-modify** files in critical config directories
+- **Rewrite config file structure** or relocate configs without updating references
+- **Generate new configs** unless explicitly instructed in repo docs or issues
+- **Hard-crash system** or drop agent/IPC health signals due to config issues
 - **Remove agent status tracking** or health monitoring
 - **Change WebSocket communication** patterns
 - **Modify Docker or deployment** configurations without testing
@@ -344,11 +470,14 @@ npm run dev  # Runs all components
 - `backend/main.py` - System startup sequence
 - `backend/Gremlin_Trade_Core/agent_coordinator.py` - Agent orchestration
 - `backend/Gremlin_Trade_Memory/` - Memory system
+- `backend/Gremlin_Trade_Core/config/Gremlin_Trade_Config/` - **All config files**
+- `backend/Gremlin_Trade_Core/config/Gremlin_Trade_Logs/` - **All log files**
+- `backend/Gremlin_Trade_Memory/vector_store/` - **All memory database files**
 - `electron/main.js` - Electron bootstrap and IPC
 - `backend/server.py` - FastAPI endpoints and WebSocket
 - Agent initialization sequence in `initialize_agents()`
 - Memory embedding and storage patterns
-- Configuration file structures
+- Configuration file structures and absolute paths
 
 ## Development Guidelines
 
