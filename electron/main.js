@@ -356,6 +356,11 @@ async function checkBackendHealth(maxAttempts = 3) {
           return { healthy: true, degraded: true, data: healthData };
         } else {
           console.log('Backend is unhealthy:', healthData.system);
+          // Allow degraded operation for better user experience
+          if (healthData.system.health_score >= 50) {
+            console.log('Allowing degraded operation due to acceptable health score');
+            return { healthy: true, degraded: true, data: healthData };
+          }
           return { healthy: false, data: healthData };
         }
       }
@@ -634,6 +639,34 @@ ipcMain.handle('get-backend-status', async () => {
       return { success: true, data };
     }
     return { success: false, error: 'Status endpoint not available' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('restart-and-wait-backend', async () => {
+  try {
+    console.log('Restarting backend and waiting for it to be ready...');
+    
+    // Stop existing backend
+    stopProcesses();
+    
+    // Wait a moment for clean shutdown
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Start backend again
+    startBackend();
+    
+    // Wait for it to be ready with extended timeout
+    const backendStatus = await waitForBackend(60, 2000); // 2 minutes max
+    
+    return {
+      success: backendStatus.healthy,
+      status: backendStatus,
+      message: backendStatus.healthy ? 
+        'Backend restarted successfully' : 
+        'Backend restart failed or degraded'
+    };
   } catch (error) {
     return { success: false, error: error.message };
   }

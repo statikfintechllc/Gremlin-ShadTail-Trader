@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Backend control
   restartBackend: () => ipcRenderer.invoke('restart-backend'),
+  restartAndWaitBackend: () => ipcRenderer.invoke('restart-and-wait-backend'),
   
   // Backend health monitoring
   checkBackendHealth: () => ipcRenderer.invoke('check-backend-health'),

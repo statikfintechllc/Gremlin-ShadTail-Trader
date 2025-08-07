@@ -220,12 +220,13 @@ async def comprehensive_health_check():
                              if isinstance(status, str) and status.startswith("failed"))
         total_agents = len(health_status["agents"]["import_status"])
         
-        if import_failures == 0:
+        if (import_failures == 0):
             health_status["system"]["status"] = "healthy"
             health_status["system"]["health_score"] = 100
-        elif import_failures <= total_agents * 0.2:  # Less than 20% failed
+        elif import_failures <= total_agents * 0.3:  # Less than 30% failed - allow degraded operation
             health_status["system"]["status"] = "degraded"
             health_status["system"]["health_score"] = max(50, 100 - (import_failures * 10))
+            health_status["system"]["degraded_reason"] = f"{import_failures} of {total_agents} agents failed to import"
         else:
             health_status["system"]["status"] = "unhealthy"
             health_status["system"]["health_score"] = max(0, 50 - (import_failures * 5))
