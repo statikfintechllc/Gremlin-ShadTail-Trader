@@ -394,7 +394,7 @@ Similarity Search → Learning Feedback → Performance Improvement
    - Configuration management
    - Tailscale tunnel control
 
-2. **HTTP API** (`backend/server.py`)
+2. **HTTP API** (`backend/Gremlin_Trade_Core/server.py`)
    - RESTful endpoints for data retrieval
    - Agent status and control
    - Configuration management
