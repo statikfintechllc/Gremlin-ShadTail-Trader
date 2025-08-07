@@ -4,6 +4,22 @@ Gremlin ShadTail Trader - Strategy Agent
 Advanced trading strategy agent with memory-based learning and signal generation
 """
 
+# Import ALL dependencies through globals.py (required)
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+
+from Gremlin_Trade_Core.globals import (
+    # Core imports that may be needed
+    logging, datetime, asyncio, json, os, sys, Path,
+    # Configuration and utilities
+    setup_agent_logging, CFG, MEM, LOGS_DIR
+)
+
+# Use centralized logging
+logger = setup_agent_logging(Path(__file__).stem)
+
+
 import asyncio
 import json
 import logging

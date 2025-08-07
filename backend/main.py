@@ -4,16 +4,36 @@ Gremlin ShadTail Trader - Main System Startup
 Complete trading system initialization with all agents and memory integration
 """
 
-import asyncio
-import signal
+# Import ALL dependencies through globals.py (required)
 import sys
-import logging
 from pathlib import Path
-from datetime import datetime
-import json
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+
+from Gremlin_Trade_Core.globals import (
+    # Core imports that may be needed
+    logging, datetime, asyncio, json, os, sys, Path,
+    # Configuration and utilities
+    setup_agent_logging, CFG, MEM, LOGS_DIR
+)
+
+# Use centralized logging
+logger = setup_agent_logging(Path(__file__).stem)
+
 
 # Add backend to path
+import sys
+from pathlib import Path
 sys.path.append(str(Path(__file__).parent))
+
+# Import ALL dependencies through globals.py (required)
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    asyncio, signal, logging, Path, datetime, json,
+    # Configuration and paths
+    CFG, MEM, LOGS_DIR, setup_agent_logging,
+    # Dependencies availability flags
+    WEB_AVAILABLE, TRADING_LIBS_AVAILABLE, ML_AVAILABLE
+)
 
 from Gremlin_Trade_Core.agent_coordinator import AgentCoordinator
 from Gremlin_Trade_Core.Gremlin_Trader_Tools.Tool_Control_Agent.tool_control_agent import ToolControlAgent
@@ -26,8 +46,8 @@ class GremlinTradingSystem:
     """
     
     def __init__(self):
-        self.setup_logging()
-        self.logger = logging.getLogger(__name__)
+        # Use centralized logging setup from globals
+        self.logger = setup_agent_logging("main_system")
         
         # Core components
         self.agent_coordinator = None
@@ -53,23 +73,10 @@ class GremlinTradingSystem:
         self.logger.info("Gremlin ShadTail Trader System initialized")
     
     def setup_logging(self):
-        """Setup comprehensive logging"""
-        log_dir = Path(__file__).parent / "Gremlin_Trade_Core" / "config" / "Gremlin_Trade_Logs"
-        log_dir.mkdir(exist_ok=True)
-        
-        # Main system log
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_dir / "system_main.log"),
-                logging.StreamHandler(sys.stdout)
-            ]
-        )
-        
-        # Suppress noisy loggers
-        logging.getLogger("chromadb").setLevel(logging.WARNING)
-        logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+        """Setup comprehensive logging - now delegated to globals"""
+        # Logging is now centralized in globals.py via setup_agent_logging
+        # This method kept for backward compatibility but implementation moved to globals
+        pass
     
     async def validate_agent_imports(self):
         """Validate that all required agent modules can be imported"""

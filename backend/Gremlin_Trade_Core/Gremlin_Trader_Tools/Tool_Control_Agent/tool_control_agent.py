@@ -4,21 +4,35 @@ Gremlin ShadTail Trader - Tool Control Agent
 Manages and coordinates all trading tools with memory-based optimization
 """
 
-import asyncio
-import json
-import logging
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Any, Optional, Callable
-from dataclasses import dataclass, field
-from enum import Enum
-import subprocess
-import shlex
-import importlib
+# Import ALL dependencies through globals.py (required)
 import sys
 from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-# Add parent directory to path
+from Gremlin_Trade_Core.globals import (
+    # Core imports that may be needed
+    logging, datetime, asyncio, json, os, sys, Path,
+    # Configuration and utilities
+    setup_agent_logging, CFG, MEM, LOGS_DIR
+)
+
+# Use centralized logging
+logger = setup_agent_logging(Path(__file__).stem)
+
+
+# Import ALL dependencies through globals.py (required)
+import sys
+from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    asyncio, json, logging, datetime, timedelta, timezone, Path,
+    Dict, List, Any, Optional, Callable, dataclass, field, Enum,
+    subprocess, shlex, importlib, sys,
+    # Configuration and logging
+    setup_agent_logging, CFG, MEM
+)
 
 from Gremlin_Trade_Core.Gremlin_Trader_Tools.Memory_Agent.base_memory_agent import BaseMemoryAgent
 

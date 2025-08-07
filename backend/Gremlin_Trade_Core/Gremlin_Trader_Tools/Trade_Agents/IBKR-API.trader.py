@@ -1,40 +1,56 @@
 #!/usr/bin/env python3
-import os
-import time
-from random import choice
-from ib_insync import IB, Stock, Contract, ScannerSubscription, MarketOrder, LimitOrder, StopOrder, Trade, Fill, CommissionReport, OrderStatusEvent, PortfolioItem
-import logging
-from logging.handlers import RotatingFileHandler
-import pandas as pd
-import schedule
+
+# Import ALL dependencies through globals.py (required)
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+
+from Gremlin_Trade_Core.globals import (
+    # Core imports that may be needed
+    logging, datetime, asyncio, json, os, sys, Path,
+    # Configuration and utilities
+    setup_agent_logging, CFG, MEM, LOGS_DIR
+)
+
+# Use centralized logging
+logger = setup_agent_logging(Path(__file__).stem)
+
+
+# Import ALL dependencies through globals.py (required)
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    os, time, choice, logging, pd, schedule,
+    # Trading libraries
+    IB, Stock, Contract, ScannerSubscription, MarketOrder, LimitOrder, StopOrder, 
+    Trade, Fill, CommissionReport, OrderStatusEvent, PortfolioItem,
+    # Configuration
+    IBKR_CONFIG, TRADING_PARAMS, SCANNER_PARAMS,
+    get_scanner_subscription, setup_agent_logging,
+    # Dependencies
+    TRADING_LIBS_AVAILABLE, RotatingFileHandler
+)
+
+if not TRADING_LIBS_AVAILABLE:
+    raise ImportError("Trading libraries not available - cannot run IBKR trader")
 
 ### ─── CONFIG ───────────────────────────────────────────────────────────────
-IB_HOST       = os.getenv("IBKR_HOST", "127.0.0.1")
-IB_PORT       = int(os.getenv("IBKR_PORT", 7497))
-IB_CLIENT_ID  = int(os.getenv("IBKR_CLIENT_ID", 1))
+# Use centralized configuration from globals
+IB_HOST       = IBKR_CONFIG['HOST']
+IB_PORT       = IBKR_CONFIG['PORT'] 
+IB_CLIENT_ID  = IBKR_CONFIG['CLIENT_ID']
 
-# Trade sizing & targets
-MAX_RISK_PER_TRADE = 0.10   # 10% of net liquidation
-STOP_LOSS_PCT      = 0.15   # 15% stop loss
-TP_PCTS            = [0.05, 0.10, 0.25, 0.50, 1.00]  # choose one per trade
+# Trade sizing & targets from globals
+MAX_RISK_PER_TRADE = TRADING_PARAMS['MAX_RISK_PER_TRADE']
+STOP_LOSS_PCT      = TRADING_PARAMS['STOP_LOSS_PCT']
+TP_PCTS            = TRADING_PARAMS['TAKE_PROFIT_LEVELS']
 
-# Scanner parameters
-EQUITY_SCAN = ScannerSubscription(
-    instrument    = 'STK',
-    locationCode  = 'STK.US.MAJOR',
-    scanCode      = 'TOP_PERC_GAIN',  # top % gainers
-    numberOfRows  = 20,
-    abovePrice    = None,
-    belowPrice    = 10.0,             # penny stocks < $10
-    aboveVolume   = 1_000_000,
-    aboveChangePercent = 5.0          # up > 5%
-)
-CRYPTO_SCAN = ScannerSubscription(
-    instrument    = 'CRYPTO',
-    locationCode  = 'PAXOS.BTC.USD',  # or your crypto data source/exchange
-    scanCode      = 'HOT_BY_PRICE',
-    numberOfRows  = 10
-)
+# Scanner parameters from globals  
+EQUITY_SCAN = get_scanner_subscription("equity")
+CRYPTO_SCAN = get_scanner_subscription("crypto")
 
 # In-memory state
 ib        = IB()
@@ -133,19 +149,8 @@ def manage_positions():
 
 
 # ─── (1) SETUP LOGGING ─────────────────────────────────────────────────────
-logger = logging.getLogger("TradeBot")
-logger.setLevel(logging.INFO)
-fmt = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
-
-# Console
-ch = logging.StreamHandler()
-ch.setFormatter(fmt)
-logger.addHandler(ch)
-
-# File (rotates at 1 MB, keeps 3 backups)
-fh = RotatingFileHandler("trade_bot.log", maxBytes=1e6, backupCount=3)
-fh.setFormatter(fmt)
-logger.addHandler(fh)
+# Use centralized logging from globals
+logger = setup_agent_logging("ibkr_trader")
 
 
 # ─── (2) EVENT CALLBACKS ───────────────────────────────────────────────────
