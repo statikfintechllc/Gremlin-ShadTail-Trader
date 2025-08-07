@@ -6,8 +6,10 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from Gremlin_Trade_Core.globals import (
-    # Core imports that may be needed
-    logging, datetime, asyncio, json, os, sys, Path,
+    # Core imports
+    logging, datetime, asyncio, json, os, sys, Path, timedelta, random, aiohttp, httpx,
+    # Type imports
+    List, Dict, Any, Optional,
     # Configuration and utilities
     setup_agent_logging, CFG, MEM, LOGS_DIR
 )
@@ -22,19 +24,6 @@ logger = setup_agent_logging(Path(__file__).stem)
 # ─────────────────────────────────────────────────────────────
 
 # Kalshi API Trader Module
-import aiohttp
-import httpx
-import json
-import asyncio
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
-import logging
-from pathlib import Path
-import sys
-import random
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 class KalshiAPITrader:
     """Kalshi API Trader for trading on Kalshi exchange"""
     

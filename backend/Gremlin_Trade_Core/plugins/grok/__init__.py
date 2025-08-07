@@ -3,13 +3,21 @@ Grok Plugin for Gremlin ShadTail Trader
 Provides chat interface and AI assistance through Grok API
 """
 
-from typing import Dict, Any, List, Optional
-import json
-import asyncio
-import httpx
-from datetime import datetime, timezone
+# Import ALL dependencies through globals.py (required)
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from Gremlin_Trade_Core.globals import (
+    # Type imports
+    Dict, Any, List, Optional,
+    # Core imports
+    json, asyncio, httpx, datetime, timezone,
+    # Configuration and utilities
+    logger, CFG
+)
+
 from ..import BasePlugin
-from ...globals import logger, CFG
 
 class GrokPlugin(BasePlugin):
     """Grok AI chat plugin"""

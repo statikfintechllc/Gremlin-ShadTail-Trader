@@ -8,63 +8,27 @@
 # Gremlin Trader Memory Embedder & Vector Store Core
 # Autonomous Trading System with Real Memory Management
 
-import os
-import json
-import sqlite3
-import numpy as np
-from datetime import datetime, timezone
-from pathlib import Path
-import shutil
-from typing import Dict, List, Any, Optional, Tuple
-import asyncio
-import threading
-import time
-import uuid
-
-# Import from centralized globals
+# Import ALL dependencies through globals.py (required)
 import sys
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
 
 from Gremlin_Trade_Core.globals import (
+    # Core imports
+    os, json, sqlite3, np, datetime, timezone, shutil, asyncio, threading, time, uuid,
+    # Type imports
+    Dict, List, Any, Optional, Tuple,
+    # Trading imports
+    yf, ta, TRADING_LIBS_AVAILABLE,
+    # Configuration and utilities
     CFG, MEM, logger, setup_module_logger, resolve_path, DATA_DIR,
-    METADATA_DB_PATH, CHROMA_DIR, CHROMA_DB_PATH, VECTOR_STORE_DIR
+    METADATA_DB_PATH, CHROMA_DIR, CHROMA_DB_PATH, VECTOR_STORE_DIR,
+    # ML imports
+    chromadb, SentenceTransformer, CHROMA_AVAILABLE, ML_AVAILABLE
 )
 
 # Module logger
 embedder_logger = setup_module_logger("memory", "embedder")
-
-# Initialize chromadb if available
-try:
-    import chromadb
-    from chromadb.config import Settings
-    CHROMA_AVAILABLE = True
-    embedder_logger.info("ChromaDB available")
-except ImportError:
-    chromadb = None
-    CHROMA_AVAILABLE = False
-    embedder_logger.warning("ChromaDB not available - using fallback storage")
-
-# Initialize sentence transformers if available
-try:
-    from sentence_transformers import SentenceTransformer
-    ML_AVAILABLE = True
-    embedder_logger.info("SentenceTransformers available")
-except ImportError:
-    SentenceTransformer = None
-    ML_AVAILABLE = False
-    embedder_logger.warning("SentenceTransformers not available - using dummy encoder")
-
-# Trading libraries
-try:
-    import yfinance as yf
-    import ta
-    TRADING_LIBS_AVAILABLE = True
-    embedder_logger.info("Trading libraries available")
-except ImportError:
-    yf = None
-    ta = None
-    TRADING_LIBS_AVAILABLE = False
-    embedder_logger.warning("Trading libraries not available")
 
 # Configuration & Paths - Use unified ChromaDB configuration from globals
 # Unified path configuration - use only one ChromaDB database

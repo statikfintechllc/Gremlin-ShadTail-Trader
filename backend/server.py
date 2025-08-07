@@ -1,20 +1,19 @@
 # backend/server.py
-from fastapi import FastAPI, WebSocket, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import asyncio
-import logging
+
+# Add project root to path first
 import sys
 from pathlib import Path
-from datetime import datetime
-from typing import List, Dict, Any, Optional
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
-# Import from local modules
+# Import ALL dependencies through globals.py (required)
 from Gremlin_Trade_Core.globals import (
+    # Web framework imports
+    FastAPI, WebSocket, HTTPException, CORSMiddleware, BaseModel,
+    # Core imports
+    asyncio, logging, datetime,
+    # Type imports
+    List, Dict, Any, Optional,
+    # Configuration and utilities
     CFG, MEM, logger, setup_module_logger,
     get_live_penny_stocks, recursive_scan, BASE_DIR
 )

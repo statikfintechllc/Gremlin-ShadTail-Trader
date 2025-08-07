@@ -22,17 +22,23 @@
 
 # trading_core/portfolio_tracker.py
 
-import json
+# Import ALL dependencies through globals.py (required)
+import sys
 from pathlib import Path
-from datetime import datetime
-from Gremlin_Trade_Core.globals import setup_module_logger
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    json, datetime, shutil, math,
+    # Configuration and utilities
+    setup_module_logger
+)
 
 # Initialize module-specific logger
 logger = setup_module_logger("trading_core", "portfolio_tracker")
+
+# Memory imports
 from Gremlin_Trade_Memory.embedder import encode, package_embedding
-import shutil
-import math
-# from self_training.feedback_loop import tag_event  # Disabled - module not available
 
 # Simple replacement for tag_event function
 def tag_event(event_type: str, data: dict):

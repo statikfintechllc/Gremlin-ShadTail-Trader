@@ -4,23 +4,7 @@ Gremlin ShadTail Trader - Main System Startup
 Complete trading system initialization with all agents and memory integration
 """
 
-# Import ALL dependencies through globals.py (required)
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent.parent.parent))
-
-from Gremlin_Trade_Core.globals import (
-    # Core imports that may be needed
-    logging, datetime, asyncio, json, os, sys, Path,
-    # Configuration and utilities
-    setup_agent_logging, CFG, MEM, LOGS_DIR
-)
-
-# Use centralized logging
-logger = setup_agent_logging(Path(__file__).stem)
-
-
-# Add backend to path
+# Add backend to path first
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent))
@@ -28,13 +12,17 @@ sys.path.append(str(Path(__file__).parent))
 # Import ALL dependencies through globals.py (required)
 from Gremlin_Trade_Core.globals import (
     # Core imports
-    asyncio, signal, logging, Path, datetime, json,
-    # Configuration and paths
-    CFG, MEM, LOGS_DIR, setup_agent_logging,
-    # Dependencies availability flags
-    WEB_AVAILABLE, TRADING_LIBS_AVAILABLE, ML_AVAILABLE
+    logging, datetime, asyncio, json, os, time, signal,
+    # Type imports  
+    Dict, List, Any, Optional,
+    # Configuration and utilities
+    setup_agent_logging, CFG, MEM, LOGS_DIR
 )
 
+# Use centralized logging
+logger = setup_agent_logging(Path(__file__).stem)
+    asyncio, signal, logging, Path, datetime, json,
+# Import system components
 from Gremlin_Trade_Core.agent_coordinator import AgentCoordinator
 from Gremlin_Trade_Core.Gremlin_Trader_Tools.Tool_Control_Agent.tool_control_agent import ToolControlAgent
 from Gremlin_Trade_Core.Gremlin_Trader_Tools.Service_Agents.market_data_service import MarketDataService

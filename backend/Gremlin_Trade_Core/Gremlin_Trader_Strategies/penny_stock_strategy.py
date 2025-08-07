@@ -4,19 +4,17 @@ Penny Stock Strategy - Specialized penny stock detection and analysis
 Implements penny stock specific criteria and momentum detection
 """
 
-import asyncio
-import numpy as np
-import pandas as pd
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
-from pathlib import Path
+# Import ALL dependencies through globals.py (required)
 import sys
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from Gremlin_Trade_Core.globals import (
+    # Core imports
+    asyncio, np, pd, datetime, timezone,
+    # Type imports
+    List, Dict, Any, Optional,
+    # Configuration and utilities
     CFG, MEM, logger, setup_module_logger,
     get_live_penny_stocks, apply_signal_rules
 )

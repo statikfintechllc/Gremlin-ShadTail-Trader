@@ -13,6 +13,7 @@ import logging
 import sqlite3
 import numpy as np
 import pandas as pd
+import math
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Any, Union, Callable
@@ -32,6 +33,7 @@ from enum import Enum
 try:
     import requests
     import httpx
+    import aiohttp
     from aiohttp import web, ClientSession
     import websockets
     import uvicorn
@@ -84,6 +86,11 @@ try:
     import psutil
     from cryptography.fernet import Fernet
     from python_dotenv import load_dotenv
+    import queue
+    import threading
+    import weakref
+    import random
+    import aiohttp
     UTILITIES_AVAILABLE = True
 except ImportError:
     print("Warning: Some utility libraries not available")

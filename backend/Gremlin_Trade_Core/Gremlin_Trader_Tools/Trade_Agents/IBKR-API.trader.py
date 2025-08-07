@@ -6,22 +6,6 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from Gremlin_Trade_Core.globals import (
-    # Core imports that may be needed
-    logging, datetime, asyncio, json, os, sys, Path,
-    # Configuration and utilities
-    setup_agent_logging, CFG, MEM, LOGS_DIR
-)
-
-# Use centralized logging
-logger = setup_agent_logging(Path(__file__).stem)
-
-
-# Import ALL dependencies through globals.py (required)
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent.parent.parent))
-
-from Gremlin_Trade_Core.globals import (
     # Core imports
     os, time, choice, logging, pd, schedule,
     # Trading libraries
@@ -33,6 +17,9 @@ from Gremlin_Trade_Core.globals import (
     # Dependencies
     TRADING_LIBS_AVAILABLE, RotatingFileHandler
 )
+
+# Use centralized logging
+logger = setup_agent_logging(Path(__file__).stem)
 
 if not TRADING_LIBS_AVAILABLE:
     raise ImportError("Trading libraries not available - cannot run IBKR trader")

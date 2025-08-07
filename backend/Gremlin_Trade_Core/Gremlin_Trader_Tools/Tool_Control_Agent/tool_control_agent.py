@@ -10,8 +10,12 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from Gremlin_Trade_Core.globals import (
-    # Core imports that may be needed
-    logging, datetime, asyncio, json, os, sys, Path,
+    # Core imports
+    asyncio, json, logging, datetime, timedelta, timezone, Path, subprocess, shlex, importlib, sys,
+    # Type imports
+    Dict, List, Any, Optional, Callable,
+    # Additional imports
+    dataclass, field, Enum,
     # Configuration and utilities
     setup_agent_logging, CFG, MEM, LOGS_DIR
 )
@@ -19,21 +23,7 @@ from Gremlin_Trade_Core.globals import (
 # Use centralized logging
 logger = setup_agent_logging(Path(__file__).stem)
 
-
-# Import ALL dependencies through globals.py (required)
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
-from Gremlin_Trade_Core.globals import (
-    # Core imports
-    asyncio, json, logging, datetime, timedelta, timezone, Path,
-    Dict, List, Any, Optional, Callable, dataclass, field, Enum,
-    subprocess, shlex, importlib, sys,
-    # Configuration and logging
-    setup_agent_logging, CFG, MEM
-)
-
+# Import base memory agent
 from Gremlin_Trade_Core.Gremlin_Trader_Tools.Memory_Agent.base_memory_agent import BaseMemoryAgent
 
 class ToolStatus(Enum):
