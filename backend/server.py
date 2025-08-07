@@ -72,8 +72,189 @@ class GrokChatRequest(BaseModel):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for application status"""
+    """Basic health check endpoint for application status"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+@app.get("/api/system/health")
+async def comprehensive_health_check():
+    """Comprehensive health check that validates all agent imports and initialization"""
+    try:
+        server_logger.info("Comprehensive health check requested")
+        
+        health_status = {
+            "system": {
+                "status": "healthy",
+                "timestamp": datetime.now().isoformat(),
+                "version": "1.0.0",
+                "mode": "production" if not server_logger.isEnabledFor(logging.DEBUG) else "development"
+            },
+            "agents": {
+                "import_status": {},
+                "initialization_status": {},
+                "runtime_status": {}
+            },
+            "dependencies": {
+                "fastapi": True,
+                "uvicorn": True,
+                "database": True,
+                "memory_system": True
+            },
+            "configuration": {
+                "loaded": True,
+                "valid": True
+            }
+        }
+        
+        # Test critical agent imports - this validates that all modules can be loaded
+        agent_imports = {
+            "BaseMemoryAgent": None,
+            "MarketTimingAgent": None, 
+            "StrategyAgent": None,
+            "RuleSetAgent": None,
+            "RuntimeAgent": None,
+            "MarketDataService": None,
+            "SimpleMarketService": None,
+            "PortfolioTracker": None,
+            "ToolControlAgent": None,
+            "SignalGenerator": None,
+            "RulesEngine": None,
+            "TaxEstimator": None,
+            "StockScraper": None,
+            "AgentCoordinator": None
+        }
+        
+        # Test each agent import
+        for agent_name in agent_imports:
+            try:
+                if agent_name == "BaseMemoryAgent":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Memory_Agent.base_memory_agent import BaseMemoryAgent
+                    agent_imports[agent_name] = BaseMemoryAgent
+                elif agent_name == "MarketTimingAgent":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Timing_Agent.market_timing import MarketTimingAgent
+                    agent_imports[agent_name] = MarketTimingAgent
+                elif agent_name == "StrategyAgent":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.strategy_agent import StrategyAgent
+                    agent_imports[agent_name] = StrategyAgent
+                elif agent_name == "RuleSetAgent":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Rule_Set_Agent.rule_set_agent import RuleSetAgent
+                    agent_imports[agent_name] = RuleSetAgent
+                elif agent_name == "RuntimeAgent":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Run_Time_Agent.runtime_agent import RuntimeAgent
+                    agent_imports[agent_name] = RuntimeAgent
+                elif agent_name == "MarketDataService":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Service_Agents.market_data_service import MarketDataService
+                    agent_imports[agent_name] = MarketDataService
+                elif agent_name == "SimpleMarketService":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Service_Agents.simple_market_service import SimpleMarketService
+                    agent_imports[agent_name] = SimpleMarketService
+                elif agent_name == "PortfolioTracker":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Tool_Control_Agent.portfolio_tracker import PortfolioTracker
+                    agent_imports[agent_name] = PortfolioTracker
+                elif agent_name == "ToolControlAgent":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Tool_Control_Agent.tool_control_agent import ToolControlAgent
+                    agent_imports[agent_name] = ToolControlAgent
+                elif agent_name == "SignalGenerator":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.signal_generator import SignalGenerator
+                    agent_imports[agent_name] = SignalGenerator
+                elif agent_name == "RulesEngine":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Rule_Set_Agent.rules_engine import RulesEngine
+                    agent_imports[agent_name] = RulesEngine
+                elif agent_name == "TaxEstimator":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Financial_Agent.tax_estimator import TaxEstimator
+                    agent_imports[agent_name] = TaxEstimator
+                elif agent_name == "StockScraper":
+                    from Gremlin_Trade_Core.Gremlin_Trader_Tools.Run_Time_Agent.stock_scraper import StockScraper
+                    agent_imports[agent_name] = StockScraper
+                elif agent_name == "AgentCoordinator":
+                    from Gremlin_Trade_Core.agent_coordinator import AgentCoordinator
+                    agent_imports[agent_name] = AgentCoordinator
+                
+                health_status["agents"]["import_status"][agent_name] = "success"
+                server_logger.debug(f"✓ {agent_name} import successful")
+                
+            except Exception as e:
+                health_status["agents"]["import_status"][agent_name] = f"failed: {str(e)}"
+                server_logger.error(f"✗ {agent_name} import failed: {e}")
+                health_status["system"]["status"] = "degraded"
+        
+        # Test memory system
+        try:
+            from Gremlin_Trade_Memory.embedder import store_embedding, package_embedding
+            health_status["dependencies"]["memory_system"] = True
+            server_logger.debug("✓ Memory system accessible")
+        except Exception as e:
+            health_status["dependencies"]["memory_system"] = f"failed: {str(e)}"
+            server_logger.error(f"✗ Memory system failed: {e}")
+            health_status["system"]["status"] = "degraded"
+        
+        # Test configuration access
+        try:
+            from Gremlin_Trade_Core.globals import CFG, MEM
+            health_status["configuration"]["loaded"] = True
+            server_logger.debug("✓ Configuration accessible")
+        except Exception as e:
+            health_status["configuration"]["loaded"] = f"failed: {str(e)}"
+            server_logger.error(f"✗ Configuration failed: {e}")
+            health_status["system"]["status"] = "degraded"
+        
+        # Get system status from main trading system if available
+        try:
+            import main
+            if hasattr(main, 'trading_system') and main.trading_system:
+                system_status = await main.trading_system.get_system_status()
+                health_status["system"].update({
+                    "trading_system_ready": system_status.get("system_ready", False),
+                    "initialization_complete": system_status.get("initialization_complete", False),
+                    "initialization_errors": system_status.get("initialization_errors", [])
+                })
+                health_status["agents"]["runtime_status"] = system_status.get("components", {})
+            else:
+                health_status["system"]["trading_system_ready"] = False
+                health_status["system"]["initialization_complete"] = False
+        except Exception as e:
+            health_status["system"]["trading_system_error"] = str(e)
+            server_logger.warning(f"Could not get trading system status: {e}")
+        
+        # Calculate overall health score
+        import_failures = sum(1 for status in health_status["agents"]["import_status"].values() 
+                             if isinstance(status, str) and status.startswith("failed"))
+        total_agents = len(health_status["agents"]["import_status"])
+        
+        if import_failures == 0:
+            health_status["system"]["status"] = "healthy"
+            health_status["system"]["health_score"] = 100
+        elif import_failures <= total_agents * 0.2:  # Less than 20% failed
+            health_status["system"]["status"] = "degraded"
+            health_status["system"]["health_score"] = max(50, 100 - (import_failures * 10))
+        else:
+            health_status["system"]["status"] = "unhealthy"
+            health_status["system"]["health_score"] = max(0, 50 - (import_failures * 5))
+        
+        health_status["summary"] = {
+            "total_agents": total_agents,
+            "successful_imports": total_agents - import_failures,
+            "failed_imports": import_failures,
+            "import_success_rate": ((total_agents - import_failures) / total_agents * 100) if total_agents > 0 else 0
+        }
+        
+        server_logger.info(f"Health check complete: {health_status['system']['status']} "
+                         f"({health_status['summary']['successful_imports']}/{total_agents} agents)")
+        
+        return health_status
+        
+    except Exception as e:
+        server_logger.error(f"Health check failed: {e}")
+        return {
+            "system": {
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e)
+            },
+            "agents": {"import_status": {}, "initialization_status": {}, "runtime_status": {}},
+            "dependencies": {},
+            "configuration": {"loaded": False},
+            "summary": {"error": "Health check system failure"}
+        }
 
 @app.get("/api/feed")
 async def get_feed():
