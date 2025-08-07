@@ -493,7 +493,7 @@ npm run dev  # Runs all components
 1. Follow existing async patterns
 2. Add comprehensive error handling
 3. Integrate with memory system for learning
-4. Add API endpoints in `server.py`
+4. Add API endpoints in `backend/server.py`
 5. Update frontend components as needed
 6. Add health checks and status monitoring
 
