@@ -728,26 +728,6 @@ The following boot sequence is **CRITICAL** and must NEVER be modified:
 
 **Remember**: This is a real, AI-powered autonomous trading system where each component depends on others. Any ambiguity or uncertainty about a file/module must be resolved by reading the code directly—never skipped or assumed. Always understand the full impact of changes before implementation.
 
-## Comprehensive File and Module Architecture
-
-### System Entry Points and Orchestrators
-
-#### **Main System Entry Points**
-- **`backend/main.py`** - **Primary system startup and initialization**
-  - **Purpose**: Main GremlinTradingSystem class orchestrating all components
-  - **Dependencies**: AgentCoordinator, ToolControlAgent, MarketDataService
-  - **Key Functions**: System initialization, trading cycle execution, graceful shutdown
-  - **Critical Role**: System-wide health monitoring, agent lifecycle management
-  - **Interactions**: Coordinates backend startup sequence, manages all agent initialization
-
-- **`backend/server.py`** - **FastAPI web server and API orchestrator**
-  - **Purpose**: HTTP/WebSocket API server for frontend communication
-  - **Dependencies**: Agent coordinator, memory system, strategy system
-  - **Key Functions**: REST endpoints, real-time WebSocket updates, plugin management
-  - **Critical Role**: Frontend-backend communication bridge, real-time data broadcasting
-  - **Interactions**: Serves frontend requests, coordinates with all agents via API
-
-- **`electron/main.js`** - **Desktop application bootstrap and process orchestrator**
   - **Purpose**: Electron app initialization, backend/frontend process management
   - **Dependencies**: Backend main.py, frontend dev server or built files
   - **Key Functions**: Window management, IPC handling, Tailscale integration
