@@ -24,7 +24,7 @@
 
 import random
 import asyncio
-from globals import datetime, setup_module_logger
+from Gremlin_Trade_Core.globals import datetime, setup_module_logger
 
 # Initialize module-specific logger
 logger = setup_module_logger("trading_core", "stock_scraper")

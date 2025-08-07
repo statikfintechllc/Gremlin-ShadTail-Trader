@@ -10,8 +10,14 @@
 # GremlinGPT v1.0.3 :: Module Integrity Directive
 # This script is a component of the GremlinGPT system, under Alpha expansion.
 
-# Refactored to use centralized imports
-from globals import logger, datetime
+# Refactored to use centralized imports  
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    logging, datetime, setup_agent_logging
+)
+
+# Use centralized logging
+logger = setup_agent_logging("tax_estimator")
 
 DEFAULT_TAX_RATE = 0.15  # Can be made dynamic via config or input
 

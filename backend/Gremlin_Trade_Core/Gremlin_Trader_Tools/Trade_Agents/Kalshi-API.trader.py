@@ -270,13 +270,6 @@ class KalshiAPITrader:
             logger.warning("No fallback data available, returning minimal data")
             return [{"message": "No data available"}]
         return fallback_data
-        if not market_overview:
-            logger.warning("No market overview data available, returning minimal data")
-            return {"message": "No data available"}
-        return market_overview
-            logger.warning("No market overview data available, returning minimal data")
-            return {"message": "No data available"}
-        return market_overview
 
     async def _get_market_overview(self) -> Dict[str, Any]:
         """Get market overview - simulated data"""
