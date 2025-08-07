@@ -5,17 +5,19 @@ Gremlin ShadTail Trader - Base Memory-Enabled Agent
 Provides common memory functionality for all trading agents
 """
 
-import asyncio
-import json
-import logging
-import time
-import uuid
-from datetime import datetime, timezone
+# Import ALL dependencies through globals.py (required)
+import sys
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    asyncio, json, logging, time, uuid, datetime, timezone, Path,
+    # Type hints
+    Dict, List, Any, Optional, Tuple
+)
 
 # Import memory system
-import sys
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 try:

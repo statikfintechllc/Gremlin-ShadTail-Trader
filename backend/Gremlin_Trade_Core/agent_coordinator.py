@@ -4,13 +4,19 @@ Gremlin ShadTail Trader - Agent Coordinator
 Master coordinator for all trading agents with memory-based orchestration
 """
 
-import asyncio
-import json
-import logging
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
-from enum import Enum
+# Import ALL dependencies through globals.py (required)
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    asyncio, json, logging, datetime, timedelta, timezone,
+    # Type hints and data structures
+    Dict, List, Any, Optional, dataclass, Enum,
+    # Memory and utilities
+    logger as globals_logger, MEM, embed_text
+)
 
 # Import all agents
 import sys

@@ -6,21 +6,22 @@
 # Contact: ascend.gremlin@gmail.com
 # ─────────────────────────────────────────────────────────────
 
-import requests
-import json
-import random
-import asyncio
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
-import logging
-from pathlib import Path
+# Import ALL dependencies through globals.py (required)
 import sys
+from pathlib import Path
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from Gremlin_Trade_Core.globals import setup_module_logger
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    requests, json, choice, uniform, randint, asyncio, datetime, timedelta, logging, Path, sys,
+    # Type hints
+    List, Dict, Any, Optional,
+    # Utilities
+    setup_module_logger
+)
 
 # Initialize logger
 market_logger = setup_module_logger("market_data", "simple_market_service")
@@ -119,26 +120,26 @@ class SimpleMarketDataService:
         
         for i, symbol in enumerate(symbols[:limit]):
             # Generate realistic penny stock data
-            base_price = random.uniform(0.50, 9.99)
-            volume = random.randint(100000, 10000000)
+            base_price = uniform(0.50, 9.99)
+            volume = randint(100000, 10000000)
             
             # Calculate realistic price change
-            price_change = random.uniform(-15.0, 25.0)  # Penny stocks are volatile
+            price_change = uniform(-15.0, 25.0)  # Penny stocks are volatile
             
             # Calculate technical indicators
-            sma_5 = base_price * random.uniform(0.95, 1.05)
-            sma_20 = base_price * random.uniform(0.90, 1.10)
-            ema_5 = base_price * random.uniform(0.96, 1.04)
-            ema_20 = base_price * random.uniform(0.92, 1.08)
-            rsi = random.uniform(20, 80)
-            vwap = base_price * random.uniform(0.98, 1.02)
+            sma_5 = base_price * uniform(0.95, 1.05)
+            sma_20 = base_price * uniform(0.90, 1.10)
+            ema_5 = base_price * uniform(0.96, 1.04)
+            ema_20 = base_price * uniform(0.92, 1.08)
+            rsi = uniform(20, 80)
+            vwap = base_price * uniform(0.98, 1.02)
             
             stock = {
                 "symbol": symbol,
                 "price": round(base_price, 2),
                 "volume": volume,
-                "avg_volume": int(volume * random.uniform(0.7, 1.3)),
-                "rotation": round(volume / (volume * random.uniform(0.7, 1.3)), 2),
+                "avg_volume": int(volume * uniform(0.7, 1.3)),
+                "rotation": round(volume / (volume * uniform(0.7, 1.3)), 2),
                 "up_pct": round(price_change, 2),
                 "ema": {
                     "5": round(ema_5, 2),
@@ -151,9 +152,9 @@ class SimpleMarketDataService:
                 "vwap": round(vwap, 2),
                 "rsi": round(rsi, 1),
                 "macd": {
-                    "macd": round(random.uniform(-0.5, 0.5), 3),
-                    "signal": round(random.uniform(-0.3, 0.3), 3),
-                    "histogram": round(random.uniform(-0.2, 0.2), 3)
+                    "macd": round(uniform(-0.5, 0.5), 3),
+                    "signal": round(uniform(-0.3, 0.3), 3),
+                    "histogram": round(uniform(-0.2, 0.2), 3)
                 },
                 "bollinger": {
                     "upper": round(base_price * 1.1, 2),
@@ -174,20 +175,20 @@ class SimpleMarketDataService:
             return {
                 "indices": {
                     "^GSPC": {
-                        "price": round(4500 + random.uniform(-50, 50), 2),
-                        "change_pct": round(random.uniform(-2, 2), 2)
+                        "price": round(4500 + uniform(-50, 50), 2),
+                        "change_pct": round(uniform(-2, 2), 2)
                     },
                     "^DJI": {
-                        "price": round(35000 + random.uniform(-500, 500), 2),
-                        "change_pct": round(random.uniform(-1.5, 1.5), 2)
+                        "price": round(35000 + uniform(-500, 500), 2),
+                        "change_pct": round(uniform(-1.5, 1.5), 2)
                     },
                     "^IXIC": {
-                        "price": round(14000 + random.uniform(-200, 200), 2),
-                        "change_pct": round(random.uniform(-2.5, 2.5), 2)
+                        "price": round(14000 + uniform(-200, 200), 2),
+                        "change_pct": round(uniform(-2.5, 2.5), 2)
                     }
                 },
-                "vix": round(20 + random.uniform(-5, 10), 2),
-                "market_sentiment": random.choice(["bullish", "neutral", "bearish"]),
+                "vix": round(20 + uniform(-5, 10), 2),
+                "market_sentiment": choice(["bullish", "neutral", "bearish"]),
                 "timestamp": datetime.now().isoformat(),
                 "data_source": "simulation"
             }

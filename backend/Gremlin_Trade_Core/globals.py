@@ -25,7 +25,7 @@ import subprocess
 import shlex
 import importlib
 import time
-from random import choice
+from random import choice, uniform, randint
 from enum import Enum
 
 # Web and networking
@@ -35,9 +35,10 @@ try:
     from aiohttp import web, ClientSession
     import websockets
     import uvicorn
-    from fastapi import FastAPI, HTTPException, Depends, status
+    from fastapi import FastAPI, HTTPException, Depends, status, WebSocket
     from fastapi.responses import JSONResponse
     from fastapi.middleware.cors import CORSMiddleware
+    from pydantic import BaseModel
     WEB_AVAILABLE = True
 except ImportError:
     print("Warning: Web libraries not available")
