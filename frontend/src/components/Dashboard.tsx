@@ -493,7 +493,7 @@ const Dashboard: React.FC = () => {
       return false;
     } catch (error) {
       if (retryCount < MAX_RETRIES - 1) {
-        console.log(`Backend connection attempt ${retryCount + 1}/${MAX_RETRIES} failed, retrying...`);
+        console.log(`Backend connection attempt ${retryCount + 1}/${MAX_RETRIES + 1} failed, retrying...`);
         await new Promise(resolve => setTimeout(resolve, 2000));
         return testBackendConnection(retryCount + 1);
       }
