@@ -474,7 +474,7 @@ npm run dev  # Runs all components
 - `backend/Gremlin_Trade_Core/config/Gremlin_Trade_Logs/` - **All log files**
 - `backend/Gremlin_Trade_Memory/vector_store/` - **All memory database files**
 - `electron/main.js` - Electron bootstrap and IPC
-- `backend/server.py` - FastAPI endpoints and WebSocket
+- `backend/Gremlin_Trade_Core/server.py` - FastAPI endpoints and WebSocket
 - Agent initialization sequence in `initialize_agents()`
 - Memory embedding and storage patterns
 - Configuration file structures and absolute paths
