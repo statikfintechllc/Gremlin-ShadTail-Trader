@@ -467,7 +467,7 @@ npm run dev  # Runs all components
 - **Modify Poetry dependencies** without version compatibility checking
 
 ### 🚨 CRITICAL - Never Modify Without Architectural Review
-- `backend/main.py` - System startup sequence
+- `backend/Gremlin_Trade_Core/main.py` - System startup sequence
 - `backend/Gremlin_Trade_Core/agent_coordinator.py` - Agent orchestration
 - `backend/Gremlin_Trade_Memory/` - Memory system
 - `backend/Gremlin_Trade_Core/config/Gremlin_Trade_Config/` - **All config files**
