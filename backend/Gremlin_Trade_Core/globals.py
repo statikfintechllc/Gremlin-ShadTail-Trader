@@ -2,8 +2,10 @@
 """
 Centralized imports and configuration for Gremlin ShadTail Trader
 Handles all system-wide imports, configuration, logging, and shared utilities
+This is the SINGLE SOURCE OF TRUTH for all backend dependencies and imports
 """
 
+# Core Python libraries
 import os
 import sys
 import json
@@ -11,24 +13,54 @@ import logging
 import sqlite3
 import numpy as np
 import pandas as pd
+import math
 from pathlib import Path
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Any, Union
-from dataclasses import dataclass
+from datetime import datetime, timezone, timedelta
+from typing import Dict, List, Optional, Any, Union, Callable
+from dataclasses import dataclass, field
 import shutil
 import asyncio
 import uuid
+import signal
+import subprocess
+import shlex
+import importlib
+import time
+from random import choice, uniform, randint
+from enum import Enum
+
+# Web and networking
+try:
+    import requests
+    import httpx
+    import aiohttp
+    from aiohttp import web, ClientSession
+    import websockets
+    import uvicorn
+    from fastapi import FastAPI, HTTPException, Depends, status, WebSocket
+    from fastapi.responses import JSONResponse
+    from fastapi.middleware.cors import CORSMiddleware
+    from pydantic import BaseModel
+    WEB_AVAILABLE = True
+except ImportError:
+    print("Warning: Web libraries not available")
+    WEB_AVAILABLE = False
 
 # Core trading and data libraries
 try:
-    from ib_insync import IB, Stock, Contract, ScannerSubscription, MarketOrder, LimitOrder, StopOrder
+    from ib_insync import IB, Stock, Contract, ScannerSubscription, MarketOrder, LimitOrder, StopOrder, Trade, Fill, CommissionReport, OrderStatusEvent, PortfolioItem
+    import yfinance as yf
+    import ta
+    TRADING_LIBS_AVAILABLE = True
 except ImportError:
-    print("Warning: ib_insync not available - IBKR functionality disabled")
+    print("Warning: Trading libraries not available - IBKR/Yahoo functionality disabled")
+    TRADING_LIBS_AVAILABLE = False
 
 # Vector and ML libraries
 try:
     import chromadb
     from sentence_transformers import SentenceTransformer
+    from sklearn.metrics.pairwise import cosine_similarity
     CHROMA_AVAILABLE = True
     ML_AVAILABLE = True
 except ImportError:
@@ -37,6 +69,32 @@ except ImportError:
     SentenceTransformer = None
     CHROMA_AVAILABLE = False
     ML_AVAILABLE = False
+
+# Logging and scheduling
+try:
+    from logging.handlers import RotatingFileHandler
+    import schedule
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    SCHEDULING_AVAILABLE = True
+except ImportError:
+    print("Warning: Scheduling libraries not available")
+    SCHEDULING_AVAILABLE = False
+
+# Additional utilities
+try:
+    import aiofiles
+    import psutil
+    from cryptography.fernet import Fernet
+    from python_dotenv import load_dotenv
+    import queue
+    import threading
+    import weakref
+    import random
+    import aiohttp
+    UTILITIES_AVAILABLE = True
+except ImportError:
+    print("Warning: Some utility libraries not available")
+    UTILITIES_AVAILABLE = False
 
 # System paths and configuration
 BASE_DIR = Path(__file__).parent.parent.parent.parent  # Root of Gremlin-ShadTail-Trader
@@ -50,6 +108,41 @@ STRATEGIES_DIR = BACKEND_DIR / "Gremlin_Trade_Core" / "Gremlin_Trader_Strategies
 # Ensure directories exist
 for directory in [CONFIG_DIR, MEMORY_DIR, VECTOR_STORE_DIR, LOGS_DIR, STRATEGIES_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
+
+# Load environment variables
+load_dotenv() if UTILITIES_AVAILABLE else None
+
+# Trading configuration constants (centralized from individual files)
+IBKR_CONFIG = {
+    'HOST': os.getenv("IBKR_HOST", "127.0.0.1"),
+    'PORT': int(os.getenv("IBKR_PORT", 7497)),
+    'CLIENT_ID': int(os.getenv("IBKR_CLIENT_ID", 1)),
+    'PAPER_PORT': 7497,
+    'LIVE_PORT': 7496,
+}
+
+TRADING_PARAMS = {
+    'MAX_RISK_PER_TRADE': 0.10,   # 10% of net liquidation
+    'STOP_LOSS_PCT': 0.15,        # 15% stop loss
+    'TAKE_PROFIT_LEVELS': [0.05, 0.10, 0.25, 0.50, 1.00],
+    'MAX_POSITIONS': 10,
+}
+
+SCANNER_PARAMS = {
+    'PENNY_STOCK_MAX_PRICE': 10.0,
+    'MIN_VOLUME': 1_000_000,
+    'MIN_PERCENT_GAIN': 5.0,
+    'SCANNER_ROWS': 20,
+    'SCANNER_INTERVAL': 300,  # 5 minutes
+}
+
+# API Configuration
+API_CONFIG = {
+    'HOST': "127.0.0.1",
+    'PORT': 8000,
+    'RELOAD': False,
+    'WORKERS': 1,
+}
 
 # Global configuration dictionary
 CFG = {}
@@ -467,11 +560,108 @@ def inject_watermark(origin="unknown"):
         logger.error(f"Error injecting watermark: {e}")
         return None
 
+def inject_watermark(origin="unknown"):
+    """Inject watermark for tracking"""
+    try:
+        text = f"Watermark from {origin} @ {datetime.now(timezone.utc).isoformat()}"
+        vector = embed_text(text)
+        meta = {"origin": origin, "timestamp": datetime.now(timezone.utc).isoformat()}
+        return package_embedding(text, vector, meta)
+    except Exception as e:
+        logger.error(f"Error injecting watermark: {e}")
+        return None
+
+# Central system initialization functions
+def initialize_backend_paths():
+    """Initialize all backend paths and ensure they exist"""
+    for directory in [CONFIG_DIR, MEMORY_DIR, VECTOR_STORE_DIR, LOGS_DIR, STRATEGIES_DIR]:
+        directory.mkdir(parents=True, exist_ok=True)
+    logger.info("All backend paths initialized")
+
+def get_scanner_subscription(scan_type="equity"):
+    """Get standardized scanner subscription configuration"""
+    if not TRADING_LIBS_AVAILABLE:
+        return None
+        
+    if scan_type == "equity":
+        return ScannerSubscription(
+            instrument='STK',
+            locationCode='STK.US.MAJOR',
+            scanCode='TOP_PERC_GAIN',
+            numberOfRows=SCANNER_PARAMS['SCANNER_ROWS'],
+            belowPrice=SCANNER_PARAMS['PENNY_STOCK_MAX_PRICE'],
+            aboveVolume=SCANNER_PARAMS['MIN_VOLUME'],
+            aboveChangePercent=SCANNER_PARAMS['MIN_PERCENT_GAIN']
+        )
+    elif scan_type == "crypto":
+        return ScannerSubscription(
+            instrument='CRYPTO',
+            locationCode='PAXOS.BTC.USD',
+            scanCode='HOT_BY_PRICE',
+            numberOfRows=10
+        )
+    return None
+
+def setup_agent_logging(agent_name: str, log_level: str = "INFO") -> logging.Logger:
+    """Setup standardized logging for agents with central configuration"""
+    logger = logging.getLogger(f"gremlin.{agent_name}")
+    logger.setLevel(getattr(logging, log_level.upper()))
+    
+    # Avoid duplicate handlers
+    if logger.handlers:
+        return logger
+    
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    
+    # File handler
+    log_file = LOGS_DIR / f"{agent_name}.log"
+    if SCHEDULING_AVAILABLE:
+        file_handler = RotatingFileHandler(
+            log_file, maxBytes=10*1024*1024, backupCount=5
+        )
+    else:
+        file_handler = logging.FileHandler(log_file)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    
+    # Also log to Agents.out for centralized monitoring
+    agents_out_handler = logging.FileHandler(LOGS_DIR / "Agents.out")
+    agents_out_handler.setFormatter(formatter)
+    logger.addHandler(agents_out_handler)
+    
+    return logger
+
+def validate_dependencies():
+    """Validate all required dependencies are available"""
+    dependencies = {
+        'web_libs': WEB_AVAILABLE,
+        'trading_libs': TRADING_LIBS_AVAILABLE,
+        'ml_libs': ML_AVAILABLE,
+        'chroma': CHROMA_AVAILABLE,
+        'scheduling': SCHEDULING_AVAILABLE,
+        'utilities': UTILITIES_AVAILABLE
+    }
+    
+    missing = [name for name, available in dependencies.items() if not available]
+    if missing:
+        logger.warning(f"Missing dependency groups: {missing}")
+    
+    return dependencies
+
 # Initialize system on import
 try:
     load_configuration()
     init_metadata_db()
-    logger.info("Global system initialization complete")
+    initialize_backend_paths()
+    deps_status = validate_dependencies()
+    logger.info(f"Global system initialization complete - Dependencies: {deps_status}")
 except Exception as e:
     logger.error(f"Error during global initialization: {e}")
     CFG = get_default_system_config()

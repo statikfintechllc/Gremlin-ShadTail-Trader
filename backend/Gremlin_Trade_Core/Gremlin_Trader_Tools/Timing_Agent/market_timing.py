@@ -4,25 +4,24 @@ Market Timing Agent - Analyzes optimal entry/exit timing for trades
 Handles session analysis, volatility windows, temporal patterns with memory-based learning
 """
 
+# Import ALL dependencies through globals.py (required)
 import sys
-import os
 from pathlib import Path
-from datetime import datetime, timedelta, time
-from typing import Dict, List, Tuple, Optional
-import pandas as pd
-import numpy as np
-from dataclasses import dataclass
-import logging
-from enum import Enum
-import asyncio
-import json
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    sys, os, datetime, timedelta, time, pd, np, logging, asyncio, json,
+    # Type imports
+    Dict, List, Tuple, Optional,
+    # Additional imports
+    dataclass, Enum,
+    # Configuration and utilities
+    logger, setup_module_logger
+)
 
+# Import base memory agent
 from Gremlin_Trade_Core.Gremlin_Trader_Tools.Memory_Agent.base_memory_agent import BaseMemoryAgent
-from Gremlin_Trade_Core.globals import logger, setup_module_logger
 
 # Setup module logger
 timing_logger = setup_module_logger("agents", "timing")

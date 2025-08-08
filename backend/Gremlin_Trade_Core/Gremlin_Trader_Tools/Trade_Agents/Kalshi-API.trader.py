@@ -1,4 +1,22 @@
 #! /usr/bin/env python3
+
+# Import ALL dependencies through globals.py (required)
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    logging, datetime, asyncio, json, os, sys, Path, timedelta, random, aiohttp, httpx,
+    # Type imports
+    List, Dict, Any, Optional,
+    # Configuration and utilities
+    setup_agent_logging, CFG, MEM, LOGS_DIR
+)
+
+# Use centralized logging
+logger = setup_agent_logging(Path(__file__).stem)
+
 # ─────────────────────────────────────────────────────────────
 # © 2025 StatikFintechLLC
 # Simple Market Data Service - Working Implementation
@@ -6,19 +24,6 @@
 # ─────────────────────────────────────────────────────────────
 
 # Kalshi API Trader Module
-import aiohttp
-import httpx
-import json
-import asyncio
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
-import logging
-from pathlib import Path
-import sys
-import random
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 class KalshiAPITrader:
     """Kalshi API Trader for trading on Kalshi exchange"""
     
@@ -254,13 +259,6 @@ class KalshiAPITrader:
             logger.warning("No fallback data available, returning minimal data")
             return [{"message": "No data available"}]
         return fallback_data
-        if not market_overview:
-            logger.warning("No market overview data available, returning minimal data")
-            return {"message": "No data available"}
-        return market_overview
-            logger.warning("No market overview data available, returning minimal data")
-            return {"message": "No data available"}
-        return market_overview
 
     async def _get_market_overview(self) -> Dict[str, Any]:
         """Get market overview - simulated data"""

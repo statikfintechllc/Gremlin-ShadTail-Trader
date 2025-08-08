@@ -6,30 +6,39 @@
 # Contact: ascend.gremlin@gmail.com
 # ─────────────────────────────────────────────────────────────
 
-# Handle optional imports gracefully for runtime validation
-try:
-    import yfinance as yf
-    YFINANCE_AVAILABLE = True
-except ImportError:
-    YFINANCE_AVAILABLE = False
-    yf = None
+#!/usr/bin/env python3
 
-import pandas as pd
-import numpy as np
-import asyncio
-import aiohttp
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
-import json
-import logging
-from pathlib import Path
+# ─────────────────────────────────────────────────────────────
+# © 2025 StatikFintechLLC  
+# Real Market Data Service - Replacing Placeholder Data
+# Contact: ascend.gremlin@gmail.com
+# ─────────────────────────────────────────────────────────────
+
+# Import ALL dependencies through globals.py (required)
 import sys
+from pathlib import Path
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from Gremlin_Trade_Core.globals import setup_module_logger
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    asyncio, sys, Path, datetime, timedelta, json, logging,
+    # Data libraries
+    pd, np, 
+    # Trading libraries (with availability check)
+    yf, TRADING_LIBS_AVAILABLE,
+    # Web/HTTP libraries  
+    httpx,
+    # Type hints
+    List, Dict, Any, Optional,
+    # Utilities
+    setup_module_logger
+)
+
+# Check yfinance availability
+YFINANCE_AVAILABLE = TRADING_LIBS_AVAILABLE and yf is not None
 
 # Initialize logger
 market_logger = setup_module_logger("market_data", "market_service")

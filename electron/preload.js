@@ -8,6 +8,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Backend control
   restartBackend: () => ipcRenderer.invoke('restart-backend'),
+  restartAndWaitBackend: () => ipcRenderer.invoke('restart-and-wait-backend'),
+  
+  // Backend health monitoring
+  checkBackendHealth: () => ipcRenderer.invoke('check-backend-health'),
+  checkBackendBasic: () => ipcRenderer.invoke('check-backend-basic'),
+  getBackendStatus: () => ipcRenderer.invoke('get-backend-status'),
   
   // Tailscale control
   tailscaleStatus: () => ipcRenderer.invoke('tailscale-status'),

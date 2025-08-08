@@ -10,8 +10,14 @@
 # GremlinGPT v1.0.3 :: Module Integrity Directive
 # This script is a component of the GremlinGPT system, under Alpha expansion.
 
-# Refactored to use centralized imports
-from globals import logger, datetime
+# Refactored to use centralized imports  
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    logging, datetime, setup_agent_logging
+)
+
+# Use centralized logging
+logger = setup_agent_logging("tax_estimator")
 
 DEFAULT_TAX_RATE = 0.15  # Can be made dynamic via config or input
 
@@ -88,7 +94,7 @@ def _persist_tax_estimate(result):
     Persist a single tax estimate to memory/log for audit/self-training.
     """
     try:
-        from memory.vector_store.embedder import package_embedding, embed_text
+        from Gremlin_Trade_Core.globals import package_embedding, embed_text
 
         text = f"TAX {result['symbol']} {result['shares']} @ {result['price']} = Tax ${result['tax']} ({result['tax_rate']*100:.1f}%)"
         vector = embed_text(text)
@@ -102,7 +108,7 @@ class TaxEstimator:
     """Tax Estimator Agent for trading system"""
     
     def __init__(self):
-        from globals import setup_module_logger
+        from Gremlin_Trade_Core.globals import setup_module_logger
         self.logger = setup_module_logger("financial", "tax_estimator")
         self.name = "TaxEstimator"
         self.initialized = True

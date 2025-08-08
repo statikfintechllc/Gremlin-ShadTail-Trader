@@ -3,11 +3,19 @@ Plugin system for Gremlin ShadTail Trader
 Provides base classes and utilities for extending functionality
 """
 
-from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
-import logging
+# Import ALL dependencies through globals.py (required)
+import sys
 from pathlib import Path
-import json
+sys.path.append(str(Path(__file__).parent.parent))
+
+from Gremlin_Trade_Core.globals import (
+    # Type imports
+    Dict, Any, List, Optional,
+    # Core imports
+    logging, json
+)
+
+from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
 

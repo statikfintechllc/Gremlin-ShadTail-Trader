@@ -22,7 +22,7 @@
 
 # trading_core/rules_engine.py
 
-from globals import datetime, setup_module_logger, embed_text, package_embedding, inject_watermark
+from Gremlin_Trade_Core.globals import datetime, setup_module_logger, embed_text, package_embedding, inject_watermark
 
 # Initialize module-specific logger
 logger = setup_module_logger("trading_core", "rules_engine")

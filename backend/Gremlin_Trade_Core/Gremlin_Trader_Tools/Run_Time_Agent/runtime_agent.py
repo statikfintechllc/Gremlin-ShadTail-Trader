@@ -4,24 +4,27 @@ Gremlin ShadTail Trader - Runtime Agent
 Advanced runtime orchestration agent with memory-based learning and system coordination
 """
 
-import asyncio
-import json
-import logging
-import time
-import psutil
-import threading
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Any, Optional, Callable
-from dataclasses import dataclass, field
-from enum import Enum
-import queue
-import weakref
-
-# Import base memory agent
+# Import ALL dependencies through globals.py (required)
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    logging, datetime, asyncio, json, os, sys, Path, time, timedelta, timezone,
+    psutil, threading, queue, weakref,
+    # Type imports
+    Dict, List, Any, Optional, Callable,
+    # Additional imports
+    dataclass, field, Enum,
+    # Configuration and utilities
+    setup_agent_logging, CFG, MEM, LOGS_DIR
+)
+
+# Use centralized logging
+logger = setup_agent_logging(Path(__file__).stem)
+
+# Import base memory agent
 from Gremlin_Trade_Core.Gremlin_Trader_Tools.Memory_Agent.base_memory_agent import BaseMemoryAgent
 
 class TaskStatus(Enum):

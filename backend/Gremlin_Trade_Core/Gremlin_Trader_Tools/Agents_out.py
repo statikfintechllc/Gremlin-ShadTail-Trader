@@ -4,18 +4,17 @@ Agent Output Handler - Receives all data from all agents properly, manages it,
 and distributes to logs and embedder and strategy set creation
 """
 
+# Import ALL dependencies through globals.py (required)
 import sys
-import os
-import json
 from pathlib import Path
-from datetime import datetime, timezone
-from typing import List, Dict, Any
-
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from Gremlin_Trade_Core.globals import (
+    # Core imports
+    sys, os, json, datetime, timezone,
+    # Type imports
+    List, Dict, Any,
+    # Configuration and utilities
     logger, setup_module_logger, CFG, MEM,
     LOGS_DIR, STRATEGIES_DIR, METADATA_DB_PATH, embed_text
 )

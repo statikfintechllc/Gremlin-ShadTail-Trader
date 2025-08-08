@@ -4,17 +4,25 @@ Gremlin ShadTail Trader - Main System Startup
 Complete trading system initialization with all agents and memory integration
 """
 
-import asyncio
-import signal
+# Add backend to path first
 import sys
-import logging
 from pathlib import Path
-from datetime import datetime
-import json
-
-# Add backend to path
 sys.path.append(str(Path(__file__).parent))
 
+# Import ALL dependencies through globals.py (required)
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    logging, datetime, asyncio, json, os, time, signal,
+    # Type imports  
+    Dict, List, Any, Optional,
+    # Configuration and utilities
+    setup_agent_logging, CFG, MEM, LOGS_DIR
+)
+
+# Use centralized logging
+logger = setup_agent_logging(Path(__file__).stem)
+    asyncio, signal, logging, Path, datetime, json,
+# Import system components
 from Gremlin_Trade_Core.agent_coordinator import AgentCoordinator
 from Gremlin_Trade_Core.Gremlin_Trader_Tools.Tool_Control_Agent.tool_control_agent import ToolControlAgent
 from Gremlin_Trade_Core.Gremlin_Trader_Tools.Service_Agents.market_data_service import MarketDataService
@@ -26,8 +34,8 @@ class GremlinTradingSystem:
     """
     
     def __init__(self):
-        self.setup_logging()
-        self.logger = logging.getLogger(__name__)
+        # Use centralized logging setup from globals
+        self.logger = setup_agent_logging("main_system")
         
         # Core components
         self.agent_coordinator = None
@@ -37,6 +45,9 @@ class GremlinTradingSystem:
         # System state
         self.is_running = False
         self.shutdown_event = asyncio.Event()
+        self.initialization_complete = False
+        self.initialization_errors = []
+        self.agent_import_status = {}
         
         # Configuration
         self.config = {
@@ -50,28 +61,80 @@ class GremlinTradingSystem:
         self.logger.info("Gremlin ShadTail Trader System initialized")
     
     def setup_logging(self):
-        """Setup comprehensive logging"""
-        log_dir = Path(__file__).parent / "Gremlin_Trade_Core" / "config" / "Gremlin_Trade_Logs"
-        log_dir.mkdir(exist_ok=True)
-        
-        # Main system log
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_dir / "system_main.log"),
-                logging.StreamHandler(sys.stdout)
-            ]
-        )
-        
-        # Suppress noisy loggers
-        logging.getLogger("chromadb").setLevel(logging.WARNING)
-        logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+        """Setup comprehensive logging - now delegated to globals"""
+        # Logging is now centralized in globals.py via setup_agent_logging
+        # This method kept for backward compatibility but implementation moved to globals
+        pass
     
+    async def validate_agent_imports(self):
+        """Validate that all required agent modules can be imported"""
+        self.logger.info("Validating agent module imports...")
+        
+        # Define all required agents
+        required_agents = {
+            "AgentCoordinator": "Gremlin_Trade_Core.agent_coordinator.AgentCoordinator",
+            "ToolControlAgent": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Tool_Control_Agent.tool_control_agent.ToolControlAgent",
+            "MarketDataService": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Service_Agents.market_data_service.MarketDataService",
+            "SimpleMarketService": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Service_Agents.simple_market_service.SimpleMarketService",
+            "BaseMemoryAgent": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Memory_Agent.base_memory_agent.BaseMemoryAgent",
+            "MarketTimingAgent": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Timing_Agent.market_timing.MarketTimingAgent",
+            "StrategyAgent": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.strategy_agent.StrategyAgent",
+            "RuleSetAgent": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Rule_Set_Agent.rule_set_agent.RuleSetAgent",
+            "RuntimeAgent": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Run_Time_Agent.runtime_agent.RuntimeAgent",
+            "PortfolioTracker": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Tool_Control_Agent.portfolio_tracker.PortfolioTracker",
+            "SignalGenerator": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Strategy_Agent.signal_generator.SignalGenerator",
+            "RulesEngine": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Rule_Set_Agent.rules_engine.RulesEngine",
+            "TaxEstimator": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Financial_Agent.tax_estimator.TaxEstimator",
+            "StockScraper": "Gremlin_Trade_Core.Gremlin_Trader_Tools.Run_Time_Agent.stock_scraper.StockScraper"
+        }
+        
+        import_results = {}
+        failed_imports = []
+        
+        for agent_name, import_path in required_agents.items():
+            try:
+                # Dynamic import to validate the module
+                module_parts = import_path.split('.')
+                module_path = '.'.join(module_parts[:-1])
+                class_name = module_parts[-1]
+                
+                module = __import__(module_path, fromlist=[class_name])
+                agent_class = getattr(module, class_name)
+                
+                import_results[agent_name] = "success"
+                self.logger.info(f"✓ {agent_name} import validated")
+                
+            except Exception as e:
+                import_results[agent_name] = f"failed: {str(e)}"
+                failed_imports.append(agent_name)
+                self.logger.error(f"✗ {agent_name} import failed: {e}")
+        
+        # Validate memory system
+        try:
+            from Gremlin_Trade_Memory.embedder import store_embedding, package_embedding, get_all_embeddings
+            import_results["MemorySystem"] = "success"
+            self.logger.info("✓ Memory system import validated")
+        except Exception as e:
+            import_results["MemorySystem"] = f"failed: {str(e)}"
+            failed_imports.append("MemorySystem")
+            self.logger.error(f"✗ Memory system import failed: {e}")
+        
+        if failed_imports:
+            error_msg = f"Critical agent import failures: {failed_imports}"
+            self.logger.error(error_msg)
+            raise RuntimeError(error_msg)
+        
+        self.logger.info(f"All {len(required_agents) + 1} agent modules successfully validated")
+        return import_results
+
     async def initialize_system(self):
-        """Initialize all system components"""
+        """Initialize all system components with comprehensive validation"""
         try:
             self.logger.info("Initializing Gremlin ShadTail Trader System...")
+            
+            # First, validate all agent imports before initialization
+            import_results = await self.validate_agent_imports()
+            self.agent_import_status = import_results
             
             # Initialize market data service first
             self.logger.info("Starting market data service...")
@@ -94,6 +157,7 @@ class GremlinTradingSystem:
             await self.agent_coordinator.initialize_agents()
             
             self.is_running = True
+            self.initialization_complete = True
             self.logger.info("Gremlin ShadTail Trader System fully initialized!")
             
             # Print system status
@@ -101,6 +165,7 @@ class GremlinTradingSystem:
             
         except Exception as e:
             self.logger.error(f"Error initializing system: {e}")
+            self.initialization_errors.append(str(e))
             await self.shutdown_system()
             raise
     
@@ -265,6 +330,31 @@ class GremlinTradingSystem:
         finally:
             await self.shutdown_system()
 
+    async def get_system_status(self):
+        """Get comprehensive system status for health checks"""
+        status = {
+            "system_ready": self.is_running,
+            "initialization_complete": self.initialization_complete,
+            "initialization_errors": self.initialization_errors,
+            "agent_import_status": self.agent_import_status,
+            "components": {
+                "agent_coordinator": self.agent_coordinator is not None,
+                "tool_control_agent": self.tool_control_agent is not None,
+                "market_data_service": self.market_data_service is not None
+            },
+            "config": self.config
+        }
+        
+        # Get agent coordinator status if available
+        if self.agent_coordinator:
+            try:
+                coord_overview = await self.agent_coordinator.get_coordination_overview()
+                status["agent_coordinator_status"] = coord_overview
+            except Exception as e:
+                status["agent_coordinator_error"] = str(e)
+        
+        return status
+
 async def main():
     """Main entry point"""
     print("🎯 Starting Gremlin ShadTail Trader...")
@@ -272,8 +362,12 @@ async def main():
     print("🧠 Memory-Enhanced Agent Architecture")
     print("-" * 50)
     
-    system = GremlinTradingSystem()
-    await system.run()
+    global trading_system
+    trading_system = GremlinTradingSystem()
+    await trading_system.run()
+
+# Global system instance for health checks
+trading_system = None
 
 if __name__ == "__main__":
     try:

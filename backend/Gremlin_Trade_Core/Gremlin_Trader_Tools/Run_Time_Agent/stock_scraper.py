@@ -22,9 +22,15 @@
 
 # trading_core/stock_scraper.py
 
-import random
-import asyncio
-from globals import datetime, setup_module_logger
+# Import ALL dependencies through globals.py (required)
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent.parent.parent))
+
+from Gremlin_Trade_Core.globals import (
+    # Core imports
+    random, asyncio, datetime, setup_module_logger
+)
 
 # Initialize module-specific logger
 logger = setup_module_logger("trading_core", "stock_scraper")
@@ -97,9 +103,20 @@ def route_scraping():
     Handles async, fallback, and integrates with all available sources.
     Returns a list of stock dicts.
     """
-    from scraper.source_router import route_scraping_async, get_live_snapshot
+    # Note: The original import was moved to globals.py pattern but module may not exist
+    # from scraper.source_router import route_scraping_async, get_live_snapshot
 
     try:
+        # Try importing the scraper module if it exists
+        try:
+            import scraper.source_router
+            route_scraping_async = scraper.source_router.route_scraping_async
+            get_live_snapshot = scraper.source_router.get_live_snapshot
+        except ImportError:
+            # Fallback to simulation if scraper module not available
+            logger.warning("Scraper module not available, using fallback simulation")
+            return simulate_stock_data()
+
         # Try async scrape (if event loop available)
         try:
             loop = asyncio.get_event_loop()

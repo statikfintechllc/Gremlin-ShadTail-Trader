@@ -10,13 +10,15 @@
 
 import sys
 from pathlib import Path
-from datetime import datetime
 
 # Add project root to path for centralized imports
 project_root = Path(__file__).parent.parent.parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from Gremlin_Trade_Core.globals import (
+    # Core imports
+    datetime,
+    # Configuration and utilities
     apply_signal_rules, 
     get_live_penny_stocks,
     package_embedding,

@@ -336,6 +336,46 @@ function loadFullSpecConfig() {
   return null;
 }
 
+// Add function to check comprehensive backend health
+async function checkBackendHealth(maxAttempts = 3) {
+  console.log('Checking comprehensive backend health...');
+  
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      // Check comprehensive health endpoint
+      const response = await fetch('http://localhost:8000/api/system/health');
+      if (response.ok) {
+        const healthData = await response.json();
+        console.log(`Backend health check ${i + 1}: ${healthData.system.status}`);
+        
+        if (healthData.system.status === 'healthy') {
+          console.log('Backend is fully healthy with all agents operational');
+          return { healthy: true, data: healthData };
+        } else if (healthData.system.status === 'degraded') {
+          console.log('Backend is operational but some agents have issues');
+          return { healthy: true, degraded: true, data: healthData };
+        } else {
+          console.log('Backend is unhealthy:', healthData.system);
+          // Allow degraded operation for better user experience
+          if (healthData.system.health_score >= 50) {
+            console.log('Allowing degraded operation due to acceptable health score');
+            return { healthy: true, degraded: true, data: healthData };
+          }
+          return { healthy: false, data: healthData };
+        }
+      }
+    } catch (error) {
+      console.log(`Backend health check ${i + 1} failed:`, error.message);
+    }
+    
+    if (i < maxAttempts - 1) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  }
+  
+  return { healthy: false, error: 'Health check failed after retries' };
+}
+
 // Add function to wait for backend to be ready
 async function waitForBackend(maxAttempts = 30, delayMs = 1000) {
   console.log('Waiting for backend to be ready...');
@@ -347,7 +387,9 @@ async function waitForBackend(maxAttempts = 30, delayMs = 1000) {
         const data = await response.json();
         if (data.status === 'healthy') {
           console.log(`Backend is ready after ${i + 1} attempts`);
-          return true;
+          // Now check comprehensive health
+          const healthCheck = await checkBackendHealth();
+          return healthCheck;
         }
       }
     } catch (error) {
@@ -359,7 +401,7 @@ async function waitForBackend(maxAttempts = 30, delayMs = 1000) {
   }
   
   console.error('Backend failed to start within timeout');
-  return false;
+  return { healthy: false, error: 'Backend startup timeout' };
 }
 
 // App event handlers
@@ -388,20 +430,31 @@ app.whenReady().then(async () => {
   }
   
   // Wait for backend to be fully ready before creating window
-  const backendReady = await waitForBackend();
+  const backendStatus = await waitForBackend();
   
-  if (backendReady) {
+  if (backendStatus.healthy) {
     console.log('Backend is ready, creating window...');
+    if (backendStatus.degraded) {
+      console.warn('Backend is operational but some components are degraded');
+    }
     createWindow();
   } else {
-    console.error('Backend failed to start within timeout');
+    console.error('Backend failed to start properly:', backendStatus.error || backendStatus.data);
     
-    // Show error dialog with options to retry or exit
+    // Show error dialog with detailed information
+    let errorMessage = 'The trading backend failed to start or is not responding properly.';
+    let errorDetail = 'You can retry to wait longer, continue anyway (limited functionality), or exit the application.';
+    
+    if (backendStatus.data && backendStatus.data.summary) {
+      const summary = backendStatus.data.summary;
+      errorDetail = `Agent Status: ${summary.successful_imports}/${summary.total_agents} agents loaded successfully. ` + errorDetail;
+    }
+    
     const result = await dialog.showMessageBox({
       type: 'error',
       title: 'Backend Connection Error',
-      message: 'Failed to connect to the backend server',
-      detail: 'The trading backend failed to start or is not responding. You can retry to wait longer, or exit the application.',
+      message: errorMessage,
+      detail: errorDetail,
       buttons: ['Retry', 'Continue Anyway', 'Exit'],
       defaultId: 0,
       cancelId: 2
@@ -410,8 +463,8 @@ app.whenReady().then(async () => {
     if (result.response === 0) {
       // Retry - wait for backend again
       console.log('User chose to retry backend connection...');
-      const retryReady = await waitForBackend(60, 2000); // Wait longer with more attempts
-      if (retryReady) {
+      const retryStatus = await waitForBackend(60, 2000); // Wait longer with more attempts
+      if (retryStatus.healthy) {
         console.log('Backend is ready after retry, creating window...');
         createWindow();
       } else {
@@ -421,7 +474,7 @@ app.whenReady().then(async () => {
       }
     } else if (result.response === 1) {
       // Continue anyway - create window without backend
-      console.log('User chose to continue without backend connection...');
+      console.log('User chose to continue without full backend connection...');
       createWindow();
     } else {
       // Exit
@@ -553,6 +606,70 @@ ipcMain.handle('restart-backend', () => {
     startBackend();
   }, 1000);
   return 'Backend restart initiated';
+});
+
+// Backend health monitoring IPC handlers
+ipcMain.handle('check-backend-health', async () => {
+  try {
+    const healthStatus = await checkBackendHealth();
+    return healthStatus;
+  } catch (error) {
+    return { healthy: false, error: error.message };
+  }
+});
+
+ipcMain.handle('check-backend-basic', async () => {
+  try {
+    const response = await fetch('http://localhost:8000/health');
+    if (response.ok) {
+      const data = await response.json();
+      return { connected: true, status: data.status };
+    }
+    return { connected: false };
+  } catch (error) {
+    return { connected: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-backend-status', async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/system/status');
+    if (response.ok) {
+      const data = await response.json();
+      return { success: true, data };
+    }
+    return { success: false, error: 'Status endpoint not available' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('restart-and-wait-backend', async () => {
+  try {
+    console.log('Restarting backend and waiting for it to be ready...');
+    
+    // Stop existing backend
+    stopProcesses();
+    
+    // Wait a moment for clean shutdown
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Start backend again
+    startBackend();
+    
+    // Wait for it to be ready with extended timeout
+    const backendStatus = await waitForBackend(60, 2000); // 2 minutes max
+    
+    return {
+      success: backendStatus.healthy,
+      status: backendStatus,
+      message: backendStatus.healthy ? 
+        'Backend restarted successfully' : 
+        'Backend restart failed or degraded'
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 // Tailscale IPC handlers
